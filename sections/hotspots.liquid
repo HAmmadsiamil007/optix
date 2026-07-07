@@ -49,7 +49,7 @@
   }
 {% endstyle %}
 
-<div class="index-section {{ section.id }} {{ bgBrightness }}">
+<div class="index-section {{ section.id }} {{ bgBrightness }}" data-aos="{% if section.settings.entrance_animation and section.settings.entrance_animation != 'existing' %}{{ section.settings.entrance_animation }}{% endif %}">
   {% if section.settings.title != blank %}
     <div class="page-width">
       <h2 class="hotspots__title {{ section.settings.heading_size }} text-{{ section.settings.heading_position }}">{{ section.settings.title }}</h2>
@@ -240,6 +240,21 @@
       "label": "t:common.lazyload_images.label",
       "info": "t:common.lazyload_images.info",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "entrance_animation",
+      "label": "t:sections.common.settings.entrance_animation.label",
+      "default": "existing",
+      "options": [
+        { "value": "existing", "label": "t:sections.common.settings.entrance_animation.options.existing.label" },
+        { "value": "ph-fade-up", "label": "t:sections.common.settings.entrance_animation.options.ph-fade-up.label" },
+        { "value": "ph-scale-in", "label": "t:sections.common.settings.entrance_animation.options.ph-scale-in.label" },
+        { "value": "ph-blur-in", "label": "t:sections.common.settings.entrance_animation.options.ph-blur-in.label" },
+        { "value": "ph-slide-left", "label": "t:sections.common.settings.entrance_animation.options.ph-slide-left.label" },
+        { "value": "ph-slide-right", "label": "t:sections.common.settings.entrance_animation.options.ph-slide-right.label" },
+        { "value": "ph-rotate-in", "label": "t:sections.common.settings.entrance_animation.options.ph-rotate-in.label" }
+      ]
     }
   ],
   "blocks": [
