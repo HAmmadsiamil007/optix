@@ -2624,7 +2624,7 @@
             }
         },
         "store-availability": {
-            "name": {}
+            "name": "Store availability"
         },
         "testimonials": {
             "name": "Testimonials",

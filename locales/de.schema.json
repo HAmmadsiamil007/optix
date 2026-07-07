@@ -3139,7 +3139,7 @@
             }
         },
         "store-availability": {
-            "name": {}
+            "name": "Store availability"
         },
         "search-results": {
             "name": "Search results"
