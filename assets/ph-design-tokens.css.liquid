@@ -1,0 +1,104 @@
+:root {
+  /* ============================
+     1. Spacing Scale (12 steps)
+     ============================ */
+  --ph-space-1: 4px;
+  --ph-space-2: 8px;
+  --ph-space-3: 12px;
+  --ph-space-4: 16px;
+  --ph-space-5: 24px;
+  --ph-space-6: 32px;
+  --ph-space-7: 40px;
+  --ph-space-8: 48px;
+  --ph-space-9: 64px;
+  --ph-space-10: 80px;
+  --ph-space-11: 96px;
+  --ph-space-12: 120px;
+
+  /* Semantic gap aliases */
+  --ph-gap-xs: var(--ph-space-1);
+  --ph-gap-sm: var(--ph-space-2);
+  --ph-gap-md: var(--ph-space-3);
+  --ph-gap-lg: var(--ph-space-4);
+  --ph-gap-xl: var(--ph-space-5);
+
+  /* ============================
+     2. Shadow System (5 levels)
+     ============================ */
+  --ph-shadow-color-rgb: 0, 0, 0;
+  --ph-shadow-opacity: 0.15;
+  --ph-shadow-alpha-sm: calc(var(--ph-shadow-opacity) * 0.33);
+  --ph-shadow-alpha-md: calc(var(--ph-shadow-opacity) * 0.47);
+  --ph-shadow-alpha-lg: calc(var(--ph-shadow-opacity) * 0.67);
+  --ph-shadow-alpha-xl: calc(var(--ph-shadow-opacity) * 0.80);
+  --ph-shadow-alpha-2xl: calc(var(--ph-shadow-opacity) * 1.00);
+  --ph-shadow-sm: 0 1px 2px rgba(var(--ph-shadow-color-rgb), var(--ph-shadow-alpha-sm));
+  --ph-shadow-md: 0 4px 6px rgba(var(--ph-shadow-color-rgb), var(--ph-shadow-alpha-md));
+  --ph-shadow-lg: 0 10px 25px rgba(var(--ph-shadow-color-rgb), var(--ph-shadow-alpha-lg));
+  --ph-shadow-xl: 0 20px 50px rgba(var(--ph-shadow-color-rgb), var(--ph-shadow-alpha-xl));
+  --ph-shadow-2xl: 0 30px 80px rgba(var(--ph-shadow-color-rgb), var(--ph-shadow-alpha-2xl));
+
+  /* ============================
+     3. Z-Index Layers (6 layers)
+     ============================ */
+  --ph-z-base: 1;
+  --ph-z-nav: 100;
+  --ph-z-overlay: 300;
+  --ph-z-drawer: 400;
+  --ph-z-modal: 500;
+  --ph-z-toast: 600;
+
+  /* ============================
+     4. Elevation System (5 levels)
+     ============================ */
+  --ph-elevation-ground: 0 0 0 rgba(0,0,0,0);
+  --ph-elevation-raised: var(--ph-shadow-sm);
+  --ph-elevation-overlay: var(--ph-shadow-lg);
+  --ph-elevation-modal: var(--ph-shadow-xl);
+  --ph-elevation-toast: var(--ph-shadow-2xl);
+
+  /* ============================
+     5. Border System
+     ============================ */
+  --ph-border-width-thin: 1px;
+  --ph-border-width-default: 2px;
+  --ph-border-width-thick: 4px;
+  --ph-border-radius-sm: 2px;
+  --ph-border-radius-md: 4px;
+  --ph-border-radius-lg: 8px;
+  --ph-border-radius-full: 9999px;
+
+  /* ============================
+     6. Opacity Scale (11 steps)
+     ============================ */
+  --ph-opacity-0: 0;
+  --ph-opacity-10: 0.1;
+  --ph-opacity-20: 0.2;
+  --ph-opacity-30: 0.3;
+  --ph-opacity-40: 0.4;
+  --ph-opacity-50: 0.5;
+  --ph-opacity-60: 0.6;
+  --ph-opacity-70: 0.7;
+  --ph-opacity-80: 0.8;
+  --ph-opacity-90: 0.9;
+  --ph-opacity-100: 1;
+}
+
+/* ============================
+   7. Dark Mode Override
+   ============================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ph-shadow-color-rgb: 255, 255, 255;
+    --ph-shadow-opacity: 0.08;
+  }
+}
+
+/* ============================
+   8. Loading Spinner Keyframes
+   ============================ */
+@keyframes ph-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
