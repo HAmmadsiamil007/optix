@@ -142,8 +142,8 @@ class Customizer {
 					$setting_id = 'phantom_' . $key;
 					$wp_customize->add_setting( $setting_id, array(
 						'default'           => $entry['default'] ?? '',
-					'sanitize_callback' => $this->get_sanitize_callback( $entry ),
-					'transport'         => $this->get_transport( $key, $entry ),
+						'sanitize_callback' => $this->get_sanitize_callback( $entry ),
+						'transport'         => $this->get_transport( $key, $entry ),
 						'capability'        => 'edit_theme_options',
 					) );
 
@@ -208,13 +208,36 @@ class Customizer {
 
 			case 'textarea':
 			case 'text':
-			case 'code':
 				$wp_customize->add_control( $setting_id, array(
 					'type'        => 'textarea',
 					'label'       => $label,
 					'description' => $description,
 					'section'     => $section_id,
 					'input_attrs' => array( 'rows' => $entry['rows'] ?? 4 ),
+					'priority'    => $priority,
+				) );
+				break;
+
+			case 'code':
+				$wp_customize->add_control( new \WP_Customize_Code_Editor_Control( $wp_customize, $setting_id, array(
+					'label'       => $label,
+					'description' => $description,
+					'section'     => $section_id,
+					'settings'    => $setting_id,
+					'priority'    => $priority,
+					'code_type'   => $entry['code_type'] ?? 'text/html',
+				) ) );
+				break;
+
+			case 'repeater':
+			case 'array':
+			case 'multiselect':
+				$wp_customize->add_control( $setting_id, array(
+					'type'        => 'textarea',
+					'label'       => $label,
+					'description' => $description . ' ' . __( 'Enter one value per line.', 'phantom-core' ),
+					'section'     => $section_id,
+					'input_attrs' => array( 'rows' => $entry['rows'] ?? 5 ),
 					'priority'    => $priority,
 				) );
 				break;
@@ -353,9 +376,6 @@ class Customizer {
 	}
 
 	/**
-	 * Build inline CSS from saved settings for initial page render.
-	 */
-	/**
 	 * Sync individual phantom_* options into the phantom_options array
 	 * after Customizer saves. This bridges the gap between Customizer's
 	 * per-setting storage and the array-based phantom_options format
@@ -369,14 +389,15 @@ class Customizer {
 				$wpdb->esc_like( 'phantom_' ) . '%'
 			)
 		);
-		$prefix = 'phantom_';
-		$options = get_option( 'phantom_options', array() );
-		$changed = false;
+		$prefix     = 'phantom_';
+		$options    = get_option( 'phantom_options', array() );
+		$changed    = false;
+		$known_keys = array_keys( Settings_Registry::get_instance()->get_entries() );
 		foreach ( $rows as $row ) {
-			if ( 'phantom_options' === $row->option_name ) {
+			$key = substr( $row->option_name, strlen( $prefix ) );
+			if ( 'options' === $key || ! in_array( $key, $known_keys, true ) ) {
 				continue;
 			}
-			$key = substr( $row->option_name, strlen( $prefix ) );
 			$value = maybe_unserialize( $row->option_value );
 			if ( ! isset( $options[ $key ] ) || $options[ $key ] !== $value ) {
 				$options[ $key ] = $value;

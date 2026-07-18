@@ -700,16 +700,19 @@ class Rest_Controller extends \WP_REST_Controller {
 					'order'      => 'ASC',
 				)
 			);
-			foreach ( $product_cats as $cat ) {
-				$items[] = array(
-					'id'       => $cat->term_id,
-					'name'     => $cat->name,
-					'slug'     => $cat->slug,
-					'count'    => $cat->count,
-					'url'      => get_term_link( $cat ),
-					'parent'   => $cat->parent,
-					'taxonomy' => 'product_cat',
-				);
+			if ( is_array( $product_cats ) ) {
+				foreach ( $product_cats as $cat ) {
+					$cat_url = get_term_link( $cat );
+					$items[] = array(
+						'id'       => $cat->term_id,
+						'name'     => $cat->name,
+						'slug'     => $cat->slug,
+						'count'    => $cat->count,
+						'url'      => is_wp_error( $cat_url ) ? '' : $cat_url,
+						'parent'   => $cat->parent,
+						'taxonomy' => 'product_cat',
+					);
+				}
 			}
 		}
 
@@ -806,9 +809,19 @@ class Rest_Controller extends \WP_REST_Controller {
 			'posts_per_page' => $per_page,
 			'paged'          => $page,
 			'post_status'    => 'publish',
-			'orderby'        => $orderby,
-			'order'          => $order,
 		);
+
+		$orderby_map = array(
+			'price'       => array( 'meta_key' => '_price', 'orderby' => 'meta_value_num' ),
+			'popularity'  => array( 'meta_key' => 'total_sales', 'orderby' => 'meta_value_num' ),
+			'rating'      => array( 'meta_key' => '_wc_average_rating', 'orderby' => 'meta_value_num' ),
+		);
+		if ( isset( $orderby_map[ $orderby ] ) ) {
+			$args = array_merge( $args, $orderby_map[ $orderby ] );
+		} else {
+			$args['orderby'] = $orderby;
+		}
+		$args['order'] = $order;
 
 		if ( ! empty( $category ) ) {
 			$args['product_cat'] = $category;
@@ -1006,6 +1019,9 @@ class Rest_Controller extends \WP_REST_Controller {
 		}
 
 		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			return new \WP_REST_Response( array( 'code' => 'create_failed', 'message' => __( 'Product created but could not be retrieved.', 'phantom-core' ) ), 500 );
+		}
 		return new \WP_REST_Response( $this->format_product( $product, true ), 201 );
 	}
 
@@ -1058,7 +1074,10 @@ class Rest_Controller extends \WP_REST_Controller {
 			wp_set_object_terms( $id, $cat_ids, 'product_cat' );
 		}
 
-		$product->save();
+		$saved = $product->save();
+		if ( ! $saved ) {
+			return new \WP_REST_Response( array( 'code' => 'update_failed', 'message' => __( 'Failed to update product.', 'phantom-core' ) ), 500 );
+		}
 		$product = wc_get_product( $id );
 		return new \WP_REST_Response( $this->format_product( $product, true ), 200 );
 	}
@@ -1072,7 +1091,10 @@ class Rest_Controller extends \WP_REST_Controller {
 		if ( ! $product ) {
 			return new \WP_REST_Response( array( 'code' => 'not_found', 'message' => __( 'Product not found.', 'phantom-core' ) ), 404 );
 		}
-		$product->delete( true );
+		$deleted = $product->delete( true );
+		if ( ! $deleted ) {
+			return new \WP_REST_Response( array( 'code' => 'delete_failed', 'message' => __( 'Failed to delete product.', 'phantom-core' ) ), 500 );
+		}
 		return new \WP_REST_Response( array( 'deleted' => true, 'id' => $id ), 200 );
 	}
 
@@ -1158,7 +1180,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				200
 			);
 		} catch ( \Throwable $e ) {
-			return new \WP_REST_Response( array( 'items' => array(), 'total' => wc_price( 0 ), 'totalItems' => 0, 'currency' => get_woocommerce_currency_symbol() ), 200 );
+			return new \WP_REST_Response( array( 'items' => array(), 'total' => '', 'totalItems' => 0, 'currency' => '' ), 200 );
 		}
 	}
 
@@ -1209,14 +1231,8 @@ class Rest_Controller extends \WP_REST_Controller {
 			foreach ( $products as $product ) {
 				$data['products'][] = $this->format_product( $product );
 			}
-			$product_total = wc_get_products(
-				array(
-					'limit'  => -1,
-					'status' => 'publish',
-					'return' => 'ids',
-				)
-			);
-			$data['pagination']['totalProducts'] = count( $product_total );
+			$product_total = wp_count_posts( 'product' );
+			$data['pagination']['totalProducts'] = (int) ( $product_total->publish ?? 0 );
 		}
 
 		$post_count = $registry->get_int( 'home_blog_count', 3 );
@@ -1298,7 +1314,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	private function get_cart_data(): array {
 		if ( ! class_exists( 'WooCommerce' ) || null === WC()->cart ) {
-			return array( 'items' => array(), 'total' => wc_price( 0 ), 'totalItems' => 0, 'currency' => get_woocommerce_currency_symbol() );
+			return array( 'items' => array(), 'total' => '', 'totalItems' => 0, 'currency' => '' );
 		}
 		$cart     = WC()->cart;
 		$items    = array();
@@ -1490,14 +1506,22 @@ class Rest_Controller extends \WP_REST_Controller {
 		}
 		$next_id = 999;
 		$extra_children = array();
+		$wc_active = class_exists( 'WooCommerce' );
 		$page_routes = array(
-			array( 'title' => __( 'Cart', 'phantom-core' ),         'url' => home_url( '/cart/' ) ),
-			array( 'title' => __( 'Checkout', 'phantom-core' ),     'url' => home_url( '/checkout/' ) ),
 			array( 'title' => __( 'FAQ', 'phantom-core' ),          'url' => home_url( '/faq/' ) ),
 			array( 'title' => __( 'Team', 'phantom-core' ),         'url' => home_url( '/team/' ) ),
 			array( 'title' => __( 'Testimonials', 'phantom-core' ), 'url' => home_url( '/testimonials/' ) ),
-			array( 'title' => __( 'My Account', 'phantom-core' ),   'url' => home_url( '/my-account/' ) ),
 		);
+		if ( $wc_active ) {
+			$page_routes = array_merge(
+				$page_routes,
+				array(
+					array( 'title' => __( 'Cart', 'phantom-core' ),      'url' => wc_get_cart_url() ),
+					array( 'title' => __( 'Checkout', 'phantom-core' ),  'url' => wc_get_checkout_url() ),
+					array( 'title' => __( 'My Account', 'phantom-core' ),'url' => wc_get_page_permalink( 'myaccount' ) ),
+				)
+			);
+		}
 		foreach ( $page_routes as $pr ) {
 			if ( ! isset( $existing_urls[ $pr['url'] ] ) ) {
 				$cid = $next_id++;
@@ -1928,29 +1952,45 @@ class Rest_Controller extends \WP_REST_Controller {
 		}
 
 		$product_id = absint( $request->get_param( 'product_id' ) );
+		if ( ! $product_id ) {
+			return new \WP_REST_Response(
+				array(
+					'code'    => 'missing_product_id',
+					'message' => __( 'A valid product_id is required.', 'phantom-core' ),
+				),
+				400
+			);
+		}
+
+		$per_page = absint( $request->get_param( 'per_page' ) ?: 10 );
+		$page     = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
 
 		$comment_query = new \WP_Comment_Query(
 			array(
 				'post_type' => 'product',
 				'status'    => 'approve',
-				'post_id'   => $product_id ?: 0,
+				'post_id'   => $product_id,
+				'number'    => $per_page,
+				'offset'    => ( $page - 1 ) * $per_page,
 			)
 		);
 		$comments = $comment_query->comments;
 		$data     = array();
 
 		foreach ( $comments as $comment ) {
-			$data[] = array(
+			$review = array(
 				'id'          => $comment->comment_ID,
 				'product_id'  => $comment->comment_post_ID,
 				'author'      => $comment->comment_author,
-				'email'       => $comment->comment_author_email,
 				'rating'      => get_comment_meta( $comment->comment_ID, 'rating', true ) ?: 0,
 				'title'       => get_comment_meta( $comment->comment_ID, 'title', true ) ?: '',
 				'content'     => $comment->comment_content,
 				'date'        => $comment->comment_date,
-				'verified'    => wc_review_is_from_verified_owner( $comment->comment_ID ),
 			);
+			if ( function_exists( 'wc_review_is_from_verified_owner' ) ) {
+				$review['verified'] = wc_review_is_from_verified_owner( $comment->comment_ID );
+			}
+			$data[] = $review;
 		}
 
 		return new \WP_REST_Response( $data, 200 );
@@ -1973,6 +2013,18 @@ class Rest_Controller extends \WP_REST_Controller {
 				'description'       => __( 'Filter by product ID.', 'phantom-core' ),
 				'type'              => 'integer',
 				'required'          => false,
+				'sanitize_callback' => 'absint',
+			),
+			'per_page' => array(
+				'description'       => __( 'Number of reviews per page.', 'phantom-core' ),
+				'type'              => 'integer',
+				'default'           => 10,
+				'sanitize_callback' => 'absint',
+			),
+			'page' => array(
+				'description'       => __( 'Page number.', 'phantom-core' ),
+				'type'              => 'integer',
+				'default'           => 1,
 				'sanitize_callback' => 'absint',
 			),
 		);
