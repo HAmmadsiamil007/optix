@@ -59,6 +59,8 @@ require_once PHANTOM_CORE_PATH . 'includes/class-custom-css.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-phantom-global-palette.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-phantom-version-compatibility.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-phantom-font-families.php';
+require_once PHANTOM_CORE_PATH . 'includes/class-phantom-fonts.php';
+require_once PHANTOM_CORE_PATH . 'includes/class-phantom-webfont-loader.php';
 require_once PHANTOM_CORE_PATH . 'includes/partial-renderers.php';
 require_once PHANTOM_CORE_PATH . 'includes/custom-css/colors.php';
 require_once PHANTOM_CORE_PATH . 'includes/custom-css/typography.php';
@@ -69,6 +71,7 @@ require_once PHANTOM_CORE_PATH . 'includes/custom-css/buttons.php';
 require_once PHANTOM_CORE_PATH . 'includes/custom-css/blog.php';
 require_once PHANTOM_CORE_PATH . 'includes/custom-css/product.php';
 require_once PHANTOM_CORE_PATH . 'includes/custom-css/responsive.php';
+require_once PHANTOM_CORE_PATH . 'includes/custom-css/responsive-helper.php';
 require_once PHANTOM_CORE_PATH . 'admin/class-settings-page.php';
 
 $rest_path = PHANTOM_CORE_PATH . 'includes/class-rest-controller.php';
@@ -144,6 +147,17 @@ register_deactivation_hook(
 	}
 );
 
+add_action( 'admin_notices', function () {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	$stored_version = get_option( 'phantom_core_version', '' );
+	if ( '' !== $stored_version && version_compare( $stored_version, '1.5.0', '<' ) ) {
+		echo '<div class="notice notice-info is-dismissible"><p>' . esc_html__( 'Phantom Core 1.5.0 — New features available! Check Customizer for updated controls.', 'phantom-core' ) . '</p></div>';
+	}
+	update_option( 'phantom_core_version', PHANTOM_CORE_VERSION );
+} );
+
 /**
  * Enqueue Google Fonts based on selected typography settings.
  */
@@ -163,6 +177,25 @@ function phantom_enqueue_google_fonts(): void {
 }
 
 add_action( 'wp_enqueue_scripts', 'PhantomCore\\phantom_enqueue_google_fonts', 9 );
+
+/**
+ * Enqueue dark mode toggle script.
+ */
+function phantom_enqueue_dark_mode(): void {
+	wp_enqueue_script(
+		'phantom-dark-mode',
+		PHANTOM_CORE_URL . 'frontend/assets/js/phantom-dark-mode.js',
+		array(),
+		PHANTOM_CORE_VERSION,
+		true
+	);
+}
+
+add_action( 'wp_enqueue_scripts', 'PhantomCore\\phantom_enqueue_dark_mode', 11 );
+
+\Phantom_Webfont_Loader::instance()->init();
+
+// JS minification: Run `npm run build` before deployment. Custom control JS files in admin/js/custom-controls/
 
 /**
  * Add WooCommerce template path override for SPA shell compatibility.

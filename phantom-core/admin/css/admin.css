@@ -116,6 +116,18 @@
 	flex: 1;
 }
 
+.ast-top-divider {
+	border-top: 1px solid #ddd;
+	margin-top: 15px;
+	padding-top: 15px;
+}
+
+.ast-bottom-divider {
+	border-bottom: 1px solid #ddd;
+	margin-bottom: 15px;
+	padding-bottom: 15px;
+}
+
 @media (max-width: 782px) {
 	.phantom-core-repeater-row {
 		flex-direction: column;

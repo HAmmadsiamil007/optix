@@ -13,6 +13,7 @@ class Customizer {
 	private static ?Customizer $instance = null;
 	private array $entries = array();
 	private array $panels = array();
+	private array $divider_controls = array();
 
 	public static function get_instance(): self {
 		if ( null === self::$instance ) {
@@ -157,6 +158,10 @@ class Customizer {
 	}
 
 	private function add_control( WP_Customize_Manager $wp_customize, string $key, array $entry, string $section_id, string $setting_id, int $priority ): void {
+		if ( ! empty( $entry['divider'] ) ) {
+			$this->divider_controls[ $setting_id ] = $entry['divider'];
+		}
+
 		$type = $entry['type'] ?? 'string';
 		$label = $entry['label'] ?? $key;
 		$description = $entry['desc'] ?? '';
@@ -358,6 +363,20 @@ class Customizer {
 			array( 'jquery', 'customize-controls' ),
 			PHANTOM_CORE_VERSION,
 			true
+		);
+
+		if ( ! empty( $this->divider_controls ) ) {
+			wp_localize_script(
+				'phantom-customizer-conditionals',
+				'PhantomDividerControls',
+				$this->divider_controls
+			);
+		}
+
+		wp_add_inline_style(
+			'customize-controls',
+			'.ast-top-divider { border-top: 1px solid #ddd; margin-top: 15px; padding-top: 15px; }' .
+			'.ast-bottom-divider { border-bottom: 1px solid #ddd; margin-bottom: 15px; padding-bottom: 15px; }'
 		);
 	}
 

@@ -30,6 +30,7 @@
       }
 
       this._injectCssVars();
+      this._initEditor();
       this._initialized = true;
       return this;
     },
@@ -150,6 +151,137 @@
         Object.keys(changes).forEach(function (k) { self._emit(k, changes[k]); });
         return data;
       });
+    },
+
+    /* ── Frontend Editor (conditional on can_edit) ────────────────────── */
+    _editMode: false,
+    _toolbar: null,
+
+    _initEditor: function () {
+      if (!this._data.can_edit) return;
+      document.body.classList.add('phantom-editor-enabled');
+      this._createToolbar();
+      var self = this;
+      document.addEventListener('click', function (e) { self._onElementClick(e); });
+    },
+
+    _getNonce: function () {
+      var meta = document.querySelector('meta[name="wp-rest-nonce"]');
+      return meta ? meta.getAttribute('content') : '';
+    },
+
+    _saveSetting: function (key, value) {
+      var url = '/index.php?rest_route=/phantom/v1/settings/' + encodeURIComponent(key);
+      var nonce = this._getNonce();
+      var headers = { 'Content-Type': 'application/json' };
+      if (nonce) headers['X-WP-Nonce'] = nonce;
+      return fetch(url, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: headers,
+        body: JSON.stringify({ value: value })
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    },
+
+    _showToast: function (msg, type) {
+      var t = document.createElement('div');
+      t.className = 'phantom-editor-toast phantom-editor-toast-' + (type || 'success');
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function () {
+        t.style.opacity = '0';
+        setTimeout(function () { t.remove(); }, 300);
+      }, 2000);
+    },
+
+    _onEditableBlur: function (e) {
+      var el = e.currentTarget;
+      var key = el.getAttribute('data-phantom-key');
+      if (!key) return;
+      var val = el.tagName === 'A' ? el.getAttribute('href') : el.innerHTML.replace(/<br\s*\/?>/g, '\n');
+      el.removeAttribute('contenteditable');
+      el.classList.remove('phantom-editing');
+      var self = this;
+      this._saveSetting(key, val).then(function () {
+        self._showToast('Saved: ' + key, 'success');
+      }).catch(function () {
+        self._showToast('Save failed: ' + key, 'error');
+      });
+    },
+
+    _onEditableKeydown: function (e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.target.blur();
+      }
+    },
+
+    _activateEdit: function (el) {
+      if (el.getAttribute('contenteditable') === 'true') return;
+      el.setAttribute('contenteditable', 'true');
+      el.classList.add('phantom-editing');
+      el.focus();
+      var self = this;
+      el.addEventListener('blur', function (e) { self._onEditableBlur(e); }, { once: true });
+      el.addEventListener('keydown', function (e) { self._onEditableKeydown(e); });
+    },
+
+    _onElementClick: function (e) {
+      if (!this._editMode) return;
+      var el = e.target.closest('[data-phantom-key]');
+      if (!el) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this._activateEdit(el);
+    },
+
+    _toggleEditMode: function () {
+      this._editMode = !this._editMode;
+      var btn = this._toolbar.querySelector('.phantom-editor-toggle');
+      if (this._editMode) {
+        btn.textContent = 'Exit Edit Mode';
+        btn.classList.add('active');
+        document.body.classList.add('phantom-edit-mode');
+      } else {
+        btn.textContent = 'Edit Page';
+        btn.classList.remove('active');
+        document.body.classList.remove('phantom-edit-mode');
+        document.querySelectorAll('[contenteditable="true"]').forEach(function (el) {
+          el.removeAttribute('contenteditable');
+          el.classList.remove('phantom-editing');
+        });
+      }
+    },
+
+    _createToolbar: function () {
+      this._toolbar = document.createElement('div');
+      this._toolbar.className = 'phantom-editor-toolbar';
+      var container = document.createElement('div');
+      container.className = 'phantom-editor-inner';
+
+      var label = document.createElement('span');
+      label.className = 'phantom-editor-label';
+      label.textContent = 'Frontend Editor';
+      container.appendChild(label);
+
+      var btn = document.createElement('button');
+      btn.className = 'phantom-editor-toggle';
+      btn.textContent = 'Edit Page';
+      btn.setAttribute('title', 'Toggle frontend edit mode');
+      var self = this;
+      btn.addEventListener('click', function () { self._toggleEditMode(); });
+      container.appendChild(btn);
+
+      var help = document.createElement('span');
+      help.className = 'phantom-editor-help';
+      help.textContent = 'Click any text to edit inline';
+      container.appendChild(help);
+
+      this._toolbar.appendChild(container);
+      document.body.appendChild(this._toolbar);
     }
   };
 

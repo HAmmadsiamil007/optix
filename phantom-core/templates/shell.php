@@ -77,6 +77,14 @@ class Shell {
     }
 
     public function handle_request(): void {
+        // Early bypass for WordPress special pages and cron
+        if ( is_feed() || is_robots() || is_trackback() ) {
+            return;
+        }
+        if ( isset( $_SERVER['REQUEST_URI'] ) && false !== strpos( $_SERVER['REQUEST_URI'], 'wp-cron' ) ) {
+            return;
+        }
+
         $request_uri = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) );
         $path = parse_url( $request_uri, PHP_URL_PATH );
         if ( false === $path ) {
@@ -102,7 +110,7 @@ class Shell {
 			isset( $_GET['empty_cart'] ) ||
 			isset( $_GET['apply_coupon'] ) ||
 			isset( $_GET['remove_coupon'] ) ||
-			preg_match( '/\.(php|css|js|png|jpg|jpeg|gif|ico|svg|webp|woff2?)(\/.*)?$/', $slug )
+			preg_match( '/\.(php|css|js|png|jpg|jpeg|gif|ico|svg|webp|woff2?|txt|xml)(\/.*)?$/', $slug )
 		) {
             status_header( 200 );
             return;
@@ -176,6 +184,11 @@ class Shell {
 
         // Read HTML
         $html = file_get_contents( $html_file );
+
+        // Inject dark mode body attribute from cookie
+        if ( isset( $_COOKIE['phantom_dark_mode'] ) && '1' === $_COOKIE['phantom_dark_mode'] ) {
+            $html = preg_replace( '/<body(\s[^>]*)?>/', '<body$1 data-phantom-dark-mode="true">', $html, 1 );
+        }
 
         // Inject loading state for SPA transitions
         $loading_html = '<div id="phantom-loading" role="status" aria-hidden="true" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-color,#fff);z-index:9999;align-items:center;justify-content:center;transition:opacity .3s"><div style="width:40px;height:40px;border:3px solid var(--border-color,#e5e7eb);border-top-color:var(--accent-color,#6366f1);border-radius:50%;animation:phantom-spin .8s linear infinite"></div></div>';
@@ -532,7 +545,7 @@ class Shell {
 		}
 		$css = $this->minify_css( $css );
 		$extra_css = \Phantom_Custom_CSS::instance()->render_style();
-		return str_replace( '</head>', '<style id="phantom-customizer-css">:root{' . $css . '}</style>' . $extra_css . '</head>', $html );
+		return str_replace( '</head>', '<style id="phantom-customizer-css">:root{' . $css . '}</style><!-- [DEPRECATED] Legacy CSS var names -- use --color-* equivalents -->' . $extra_css . '</head>', $html );
     }
 
 	private function inject_images( string $html ): string {
@@ -624,10 +637,6 @@ class Shell {
 		$css_url = PHANTOM_CORE_URL . 'frontend/assets/css/phantom-editor.css?v=' . $ver;
 		$editor_css = '<link rel="stylesheet" id="phantom-editor-css" href="' . esc_url( $css_url ) . '" media="all" />';
 
-		// Editor JS
-		$js_url = PHANTOM_CORE_URL . 'frontend/assets/js/phantom-editor.js?v=' . $ver;
-		$editor_js = '<script src="' . esc_url( $js_url ) . '" id="phantom-editor-js"></script>';
-
 		// Add body class for JS detection
 		$html = preg_replace( '/<body(\s[^>]*)?>/', '<body class="phantom-editor-enabled"$1>', $html, 1 );
 
@@ -635,7 +644,7 @@ class Shell {
 		$nonce = wp_create_nonce( 'wp_rest' );
 		$nonce_tag = '<meta name="wp-rest-nonce" content="' . esc_attr( $nonce ) . '" />';
 
-		$assets = $nonce_tag . "\n" . $editor_css . "\n" . $editor_js;
+		$assets = $nonce_tag . "\n" . $editor_css;
 		$html = str_replace( '</head>', $assets . '</head>', $html );
 
 		return $html;
@@ -652,6 +661,7 @@ class Shell {
 			$data[ $key ] = get_option( $option_key, $entry['default'] ?? '' );
 		}
 		$data['_cssVarMap'] = $css_map;
+		$data['can_edit']  = is_user_logged_in() && current_user_can( 'edit_theme_options' );
 
 		$json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
 

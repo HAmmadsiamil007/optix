@@ -59,6 +59,18 @@ class Phantom_Font_Families {
 		return '"' . $font_family . '", sans-serif';
 	}
 
+	public function get_subsets(): array {
+		return array(
+			'latin',
+			'latin-ext',
+			'cyrillic',
+			'cyrillic-ext',
+			'greek',
+			'greek-ext',
+			'vietnamese',
+		);
+	}
+
 	public function get_font_enqueue_url( string $body_font = 'Archivo', string $heading_font = 'Playfair Display', array $subsets = array() ): string {
 		$fonts = array();
 		if ( $body_font && 'Archivo' !== $body_font ) {

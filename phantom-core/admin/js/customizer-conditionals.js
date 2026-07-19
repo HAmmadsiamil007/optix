@@ -60,4 +60,19 @@
 
   wp.customize.bind('ready', initConditionals);
 
+  function initDividers() {
+    if (typeof PhantomDividerControls === 'undefined') return;
+    wp.customize.control.each(function (control) {
+      var divider = PhantomDividerControls[control.id];
+      if (!divider) return;
+      var cssClass = divider.ast_class || 'ast-top-divider';
+      var container = control.container;
+      if (container.length) {
+        container.prepend('<div class="' + cssClass + '"></div>');
+      }
+    });
+  }
+
+  wp.customize.bind('ready', initDividers);
+
 })(jQuery);

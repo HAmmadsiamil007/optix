@@ -30,8 +30,35 @@ class Phantom_Custom_CSS {
 		if ( false !== $cached ) {
 			return $cached;
 		}
+
+		$use_file_cache = (bool) get_option( 'phantom_cache_generated_css', false );
+
+		if ( $use_file_cache && ! is_customize_preview() ) {
+			$upload_dir = wp_upload_dir();
+			$file_path  = $upload_dir['basedir'] . '/phantom-cache/dynamic.css';
+			if ( file_exists( $file_path ) ) {
+				$cached = file_get_contents( $file_path );
+				if ( false !== $cached ) {
+					return $cached;
+				}
+			}
+		}
+
 		$css = '';
 		$css = apply_filters( 'phantom_dynamic_css', $css );
+		if ( ! is_customize_preview() ) {
+			$css = self::minify_css( $css );
+		}
+
+		if ( $use_file_cache && ! is_customize_preview() ) {
+			$upload_dir = wp_upload_dir();
+			$cache_dir  = $upload_dir['basedir'] . '/phantom-cache';
+			if ( ! is_dir( $cache_dir ) ) {
+				wp_mkdir_p( $cache_dir );
+			}
+			file_put_contents( $cache_dir . '/dynamic.css', $css );
+		}
+
 		set_transient( self::CACHE_KEY, $css, self::CACHE_TTL );
 		return $css;
 	}
@@ -100,5 +127,28 @@ class Phantom_Custom_CSS {
 		$css = preg_replace( '/\s*>\s*/', '>', $css );
 		$css = preg_replace( '/\s+/', ' ', $css );
 		return trim( $css );
+	}
+
+	public static function parse_css( array $css_array, ?int $min_breakpoint = null, ?int $max_breakpoint = null ): string {
+		$css = '';
+		foreach ( $css_array as $selector => $properties ) {
+			$rules = '';
+			foreach ( $properties as $property => $value ) {
+				if ( '' !== $value ) {
+					$rules .= "\t" . $property . ': ' . $value . ";\n";
+				}
+			}
+			if ( '' !== $rules ) {
+				$css .= $selector . " {\n" . $rules . "}\n";
+			}
+		}
+		if ( null !== $min_breakpoint && null !== $max_breakpoint ) {
+			$css = '@media (min-width: ' . $min_breakpoint . 'px) and (max-width: ' . $max_breakpoint . 'px) {' . "\n" . $css . '}';
+		} elseif ( null !== $min_breakpoint ) {
+			$css = '@media (min-width: ' . $min_breakpoint . 'px) {' . "\n" . $css . '}';
+		} elseif ( null !== $max_breakpoint ) {
+			$css = '@media (max-width: ' . $max_breakpoint . 'px) {' . "\n" . $css . '}';
+		}
+		return $css;
 	}
 }

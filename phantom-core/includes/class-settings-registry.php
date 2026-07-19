@@ -177,6 +177,17 @@ class Settings_Registry {
 		return $this->get( $key ) ?? $default;
 	}
 
+	public function get_defaults(): array {
+		if ( ! $this->registered ) {
+			$this->register();
+		}
+		$defaults = array();
+		foreach ( $this->entries as $key => $entry ) {
+			$defaults[ $key ] = $entry['default'] ?? '';
+		}
+		return $defaults;
+	}
+
 	public function get_entries(): array {
 		if ( ! $this->registered ) {
 			$this->register();
@@ -815,6 +826,23 @@ class Settings_Registry {
 
 	private function section_navigation(): array {
 		return array(
+			'menu_location'                   => array(
+				'section'  => 'navigation',
+				'type'     => 'ast-select',
+				'default'  => 'phantom_primary',
+				'options'  => array(
+					'phantom_primary'   => __( 'Primary Menu', 'phantom-core' ),
+					'phantom_secondary' => __( 'Secondary Menu', 'phantom-core' ),
+					'phantom_mobile'    => __( 'Mobile Menu', 'phantom-core' ),
+					'phantom_footer'    => __( 'Footer Menu', 'phantom-core' ),
+				),
+				'sanitize' => 'sanitize_text_field',
+				'label'    => __( 'Menu Location', 'phantom-core' ),
+				'partial'  => array(
+					'selector'        => 'nav.site-navigation, .main-navigation',
+					'render_callback' => 'phantom_render_nav_partial',
+				),
+			),
 			'footer_nav'                      => array(
 				'section'  => 'navigation',
 				'type'     => 'repeater',
@@ -3141,6 +3169,7 @@ class Settings_Registry {
 				'max'     => 40,
 				'sanitize' => 'absint',
 				'label'   => __( 'Body Font Size (px)', 'phantom-core' ),
+				'responsive' => true,
 			),
 			'typography_line_height'     => array(
 				'section' => 'typography',
@@ -3204,6 +3233,7 @@ class Settings_Registry {
 				'max'     => 200,
 				'sanitize' => 'absint',
 				'label'   => __( 'H1 Font Size (px)', 'phantom-core' ),
+				'responsive' => true,
 			),
 			'typography_h1_height'       => array(
 				'section' => 'typography',
@@ -3222,6 +3252,7 @@ class Settings_Registry {
 				'max'     => 160,
 				'sanitize' => 'absint',
 				'label'   => __( 'H2 Font Size (px)', 'phantom-core' ),
+				'responsive' => true,
 			),
 			'typography_h2_height'       => array(
 				'section' => 'typography',
@@ -3240,6 +3271,7 @@ class Settings_Registry {
 				'max'     => 120,
 				'sanitize' => 'absint',
 				'label'   => __( 'H3 Font Size (px)', 'phantom-core' ),
+				'responsive' => true,
 			),
 			'typography_h3_height'       => array(
 				'section' => 'typography',
@@ -3893,6 +3925,7 @@ class Settings_Registry {
 				'label'        => __( 'Container Gutter', 'phantom-core' ),
 				'css_property' => '--container-gutter',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'content_gap'           => array(
 				'section'      => 'spacing',
@@ -4320,6 +4353,13 @@ class Settings_Registry {
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Remove Block Library CSS', 'phantom-core' ),
+			),
+			'cache_generated_css'            => array(
+				'label'       => __( 'Cache CSS to Files', 'phantom-core' ),
+				'type'        => 'bool',
+				'default'     => false,
+				'section'     => 'performance',
+				'priority'    => 100,
 			),
 		);
 	}

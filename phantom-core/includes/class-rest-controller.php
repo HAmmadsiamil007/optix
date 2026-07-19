@@ -45,19 +45,6 @@ class Rest_Controller extends \WP_REST_Controller {
 
 		register_rest_route(
 			$this->namespace,
-			'/settings/batch',
-			array(
-				array(
-					'methods'             => \WP_REST_Server::CREATABLE,
-					'callback'            => array( $this, 'batch_update_settings' ),
-					'permission_callback' => array( $this, 'settings_permission_check' ),
-					'args'                => $this->get_batch_update_args(),
-				),
-			)
-		);
-
-		register_rest_route(
-			$this->namespace,
 			'/settings/(?P<key>[\w-]+)',
 			array(
 				array(
@@ -375,10 +362,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$entries     = Settings_Registry::get_instance()->get_entries();
 
 		if ( ! isset( $entries[ $partial_key ] ) || empty( $entries[ $partial_key ]['partial'] ) ) {
-			return new \WP_REST_Response(
-				array( 'code' => 'invalid_partial', 'message' => __( 'Invalid partial key.', 'phantom-core' ) ),
-				400
-			);
+			return $this->wp_error( 'invalid_partial', __( 'Invalid partial key.', 'phantom-core' ), 400 );
 		}
 
 		$partial     = $entries[ $partial_key ]['partial'];
@@ -386,10 +370,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$selector    = $partial['selector'] ?? '';
 
 		if ( ! $callback || ! function_exists( $callback ) ) {
-			return new \WP_REST_Response(
-				array( 'code' => 'invalid_callback', 'message' => __( 'Render callback not found.', 'phantom-core' ) ),
-				500
-			);
+			return $this->wp_error( 'invalid_callback', __( 'Render callback not found.', 'phantom-core' ), 500 );
 		}
 
 		ob_start();
@@ -451,87 +432,55 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function update_settings( \WP_REST_Request $request ): \WP_REST_Response {
 		$settings = $request->get_param( 'settings' );
-		if ( ! is_array( $settings ) || empty( $settings ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'invalid_settings',
-					'message' => __( 'The settings parameter must be a non-empty object.', 'phantom-core' ),
-				),
-				400
-			);
-		}
+		$changes  = $request->get_param( 'changes' );
 
 		$registry = Settings_Registry::get_instance();
 		$updated  = array();
 		$errors   = array();
 
-		foreach ( $settings as $key => $value ) {
-			$key = sanitize_key( (string) $key );
-			if ( ! $registry->has( $key ) ) {
-				$errors[] = sprintf(
-					/* translators: %s: setting key */
-					__( 'Unknown setting key: %s', 'phantom-core' ),
-					$key
-				);
-				continue;
+		if ( is_array( $changes ) && ! empty( $changes ) && ! is_array( $settings ) ) {
+			foreach ( $changes as $index => $item ) {
+				if ( ! is_array( $item ) || ! isset( $item['key'] ) ) {
+					$errors[] = sprintf(
+						/* translators: %d: item index */
+						__( 'Item at index %d is missing a key.', 'phantom-core' ),
+						$index
+					);
+					continue;
+				}
+				$key = sanitize_key( $item['key'] );
+				if ( ! $registry->has( $key ) ) {
+					$errors[] = sprintf(
+						/* translators: %s: setting key */
+						__( 'Unknown setting key: %s', 'phantom-core' ),
+						$key
+					);
+					continue;
+				}
+				$value = array_key_exists( 'value', $item ) ? $item['value'] : null;
+				$registry->set( $key, $value );
+				$updated[ $key ] = $registry->get( $key );
 			}
-			$registry->set( $key, $value );
-			$updated[ $key ] = $registry->get( $key );
+		} elseif ( is_array( $settings ) && ! empty( $settings ) ) {
+			foreach ( $settings as $key => $value ) {
+				$key = sanitize_key( (string) $key );
+				if ( ! $registry->has( $key ) ) {
+					$errors[] = sprintf(
+						/* translators: %s: setting key */
+						__( 'Unknown setting key: %s', 'phantom-core' ),
+						$key
+					);
+					continue;
+				}
+				$registry->set( $key, $value );
+				$updated[ $key ] = $registry->get( $key );
+			}
+		} else {
+			return $this->wp_error( 'invalid_params', __( 'Provide a settings object or a changes array.', 'phantom-core' ), 400 );
 		}
 
 		\PhantomCore\Customizer::get_instance()->sync_options();
 
-		delete_transient( 'phantom_page_data' );
-		\Phantom_Custom_CSS::flush_cache();
-
-		return new \WP_REST_Response(
-			array(
-				'updated' => $updated,
-				'errors'  => $errors,
-			),
-			empty( $errors ) ? 200 : 207
-		);
-	}
-
-	public function batch_update_settings( \WP_REST_Request $request ): \WP_REST_Response {
-		$items = $request->get_param( 'items' );
-		if ( ! is_array( $items ) || empty( $items ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'invalid_items',
-					'message' => __( 'The items parameter must be a non-empty array of {key, value} objects.', 'phantom-core' ),
-				),
-				400
-			);
-		}
-
-		$registry = Settings_Registry::get_instance();
-		$updated  = array();
-		$errors   = array();
-
-		foreach ( $items as $index => $item ) {
-			if ( ! is_array( $item ) || ! isset( $item['key'] ) ) {
-				$errors[] = sprintf(
-					__( 'Item at index %d is missing a key.', 'phantom-core' ),
-					$index
-				);
-				continue;
-			}
-			$key = sanitize_key( $item['key'] );
-			if ( ! $registry->has( $key ) ) {
-				$errors[] = sprintf(
-					/* translators: %s: setting key */
-					__( 'Unknown setting key: %s', 'phantom-core' ),
-					$key
-				);
-				continue;
-			}
-			$value = array_key_exists( 'value', $item ) ? $item['value'] : null;
-			$registry->set( $key, $value );
-			$updated[ $key ] = $registry->get( $key );
-		}
-
-		\PhantomCore\Customizer::get_instance()->sync_options();
 		delete_transient( 'phantom_page_data' );
 		\Phantom_Custom_CSS::flush_cache();
 
@@ -664,18 +613,18 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function import_settings( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return $this->error_response( 'unauthorized', __( 'You do not have permission to import settings.', 'phantom-core' ), 403 );
+			return $this->wp_error( 'unauthorized', __( 'You do not have permission to import settings.', 'phantom-core' ), 403 );
 		}
 
 		$body_json = $request->get_body();
 		if ( strlen( $body_json ) > 5 * 1024 * 1024 ) {
-			return $this->error_response( 'payload_too_large', __( 'Payload exceeds maximum size of 5 MB.', 'phantom-core' ), 413 );
+			return $this->wp_error( 'payload_too_large', __( 'Payload exceeds maximum size of 5 MB.', 'phantom-core' ), 413 );
 		}
 
 		$rate_key = 'phantom_import_rate_' . get_current_user_id();
 		$last     = get_transient( $rate_key );
 		if ( false !== $last ) {
-			return $this->error_response(
+			return $this->wp_error(
 				'rate_limited',
 				__( 'Import rate limit reached. Please wait 60 seconds before trying again.', 'phantom-core' ),
 				429
@@ -684,13 +633,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 		$settings = $request->get_param( 'settings' );
 		if ( ! is_array( $settings ) || empty( $settings ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'invalid_settings',
-					'message' => __( 'The settings parameter must be a non-empty object.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'invalid_settings', __( 'The settings parameter must be a non-empty object.', 'phantom-core' ), 400 );
 		}
 
 		set_transient( $rate_key, time(), 60 );
@@ -804,13 +747,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		}
 
 		if ( ! $post ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'not_found',
-					'message' => __( 'Post not found.', 'phantom-core' ),
-				),
-				404
-			);
+			return $this->wp_error( 'not_found', __( 'Post not found.', 'phantom-core' ), 404 );
 		}
 
 		setup_postdata( $post );
@@ -854,13 +791,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$page = get_page_by_path( $slug, OBJECT, 'page' );
 
 		if ( ! $page ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'not_found',
-					'message' => __( 'Page not found.', 'phantom-core' ),
-				),
-				404
-			);
+			return $this->wp_error( 'not_found', __( 'Page not found.', 'phantom-core' ), 404 );
 		}
 
 		return new \WP_REST_Response(
@@ -936,13 +867,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$theme_locations = get_nav_menu_locations();
 
 		if ( ! isset( $theme_locations[ $location ] ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'not_found',
-					'message' => __( 'Menu location not found.', 'phantom-core' ),
-				),
-				404
-			);
+			return $this->wp_error( 'not_found', __( 'Menu location not found.', 'phantom-core' ), 404 );
 		}
 
 		$menu_id = $theme_locations[ $location ];
@@ -967,13 +892,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function get_products( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		$per_page    = max( 1, min( 100, absint( $request->get_param( 'per_page' ) ?: 12 ) ) );
@@ -1110,13 +1029,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function get_featured_products(): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		$args = array(
@@ -1151,7 +1064,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function create_product( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response( array( 'code' => 'woocommerce_inactive', 'message' => __( 'WooCommerce is not active.', 'phantom-core' ) ), 400 );
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 		$name        = sanitize_text_field( $request->get_param( 'name' ) );
 		$description = wp_kses_post( $request->get_param( 'description' ) );
@@ -1164,7 +1077,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$type        = in_array( $request->get_param( 'type' ), array( 'simple', 'variable', 'grouped', 'external' ), true ) ? $request->get_param( 'type' ) : 'simple';
 
 		if ( empty( $name ) ) {
-			return new \WP_REST_Response( array( 'code' => 'missing_name', 'message' => __( 'Product name is required.', 'phantom-core' ) ), 400 );
+			return $this->wp_error( 'missing_name', __( 'Product name is required.', 'phantom-core' ), 400 );
 		}
 
 		$product = wc_get_product_object( $type );
@@ -1199,7 +1112,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$product_id = $product->save();
 
 		if ( ! $product_id ) {
-			return new \WP_REST_Response( array( 'code' => 'create_failed', 'message' => __( 'Failed to create product.', 'phantom-core' ) ), 500 );
+			return $this->wp_error( 'create_failed', __( 'Failed to create product.', 'phantom-core' ), 500 );
 		}
 
 		if ( ! empty( $request->get_param( 'categories' ) ) ) {
@@ -1219,19 +1132,19 @@ class Rest_Controller extends \WP_REST_Controller {
 
 		$product = wc_get_product( $product_id );
 		if ( ! $product ) {
-			return new \WP_REST_Response( array( 'code' => 'create_failed', 'message' => __( 'Product created but could not be retrieved.', 'phantom-core' ) ), 500 );
+			return $this->wp_error( 'create_failed', __( 'Product created but could not be retrieved.', 'phantom-core' ), 500 );
 		}
 		return new \WP_REST_Response( $this->format_product( $product, true ), 201 );
 	}
 
 	public function update_product( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response( array( 'code' => 'woocommerce_inactive', 'message' => __( 'WooCommerce is not active.', 'phantom-core' ) ), 400 );
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 		$id      = absint( $request->get_param( 'id' ) );
 		$product = wc_get_product( $id );
 		if ( ! $product ) {
-			return new \WP_REST_Response( array( 'code' => 'not_found', 'message' => __( 'Product not found.', 'phantom-core' ) ), 404 );
+			return $this->wp_error( 'not_found', __( 'Product not found.', 'phantom-core' ), 404 );
 		}
 
 		if ( $request->has_param( 'name' ) ) {
@@ -1275,7 +1188,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 		$saved = $product->save();
 		if ( ! $saved ) {
-			return new \WP_REST_Response( array( 'code' => 'update_failed', 'message' => __( 'Failed to update product.', 'phantom-core' ) ), 500 );
+			return $this->wp_error( 'update_failed', __( 'Failed to update product.', 'phantom-core' ), 500 );
 		}
 		$product = wc_get_product( $id );
 		return new \WP_REST_Response( $this->format_product( $product, true ), 200 );
@@ -1283,42 +1196,30 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function delete_product( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response( array( 'code' => 'woocommerce_inactive', 'message' => __( 'WooCommerce is not active.', 'phantom-core' ) ), 400 );
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 		$id      = absint( $request->get_param( 'id' ) );
 		$product = wc_get_product( $id );
 		if ( ! $product ) {
-			return new \WP_REST_Response( array( 'code' => 'not_found', 'message' => __( 'Product not found.', 'phantom-core' ) ), 404 );
+			return $this->wp_error( 'not_found', __( 'Product not found.', 'phantom-core' ), 404 );
 		}
 		$deleted = $product->delete( true );
 		if ( ! $deleted ) {
-			return new \WP_REST_Response( array( 'code' => 'delete_failed', 'message' => __( 'Failed to delete product.', 'phantom-core' ) ), 500 );
+			return $this->wp_error( 'delete_failed', __( 'Failed to delete product.', 'phantom-core' ), 500 );
 		}
 		return new \WP_REST_Response( array( 'deleted' => true, 'id' => $id ), 200 );
 	}
 
 	public function get_product( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		$id      = absint( $request->get_param( 'id' ) );
 		$product = wc_get_product( $id );
 
 		if ( ! $product ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'not_found',
-					'message' => __( 'Product not found.', 'phantom-core' ),
-				),
-				404
-			);
+			return $this->wp_error( 'not_found', __( 'Product not found.', 'phantom-core' ), 404 );
 		}
 
 		$data = $this->format_product( $product, true );
@@ -1337,13 +1238,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function get_cart(): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		try {
@@ -1924,17 +1819,12 @@ class Rest_Controller extends \WP_REST_Controller {
 			'settings' => array(
 				'description' => __( 'Object of key-value pairs to update.', 'phantom-core' ),
 				'type'        => 'object',
-				'required'    => true,
+				'required'    => false,
 			),
-		);
-	}
-
-	private function get_batch_update_args(): array {
-		return array(
-			'items' => array(
-				'description' => __( 'Array of {key, value} objects to update.', 'phantom-core' ),
+			'changes' => array(
+				'description' => __( 'Array of {key, value} objects (backward compat for removed /settings/batch).', 'phantom-core' ),
 				'type'        => 'array',
-				'required'    => true,
+				'required'    => false,
 				'items'       => array(
 					'type'       => 'object',
 					'properties' => array(
@@ -2246,13 +2136,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function get_woo_attributes(): \WP_REST_Response {
 		if ( ! function_exists( 'wc_get_attribute_taxonomies' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		$attributes = wc_get_attribute_taxonomies();
@@ -2274,35 +2158,17 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function get_woo_variations( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! function_exists( 'wc_get_product' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		$product_id = absint( $request->get_param( 'product_id' ) );
 		if ( ! $product_id ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'missing_product_id',
-					'message' => __( 'Product ID is required.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'missing_product_id', __( 'Product ID is required.', 'phantom-core' ), 400 );
 		}
 
 		$product = wc_get_product( $product_id );
 		if ( ! $product ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'not_found',
-					'message' => __( 'Product not found.', 'phantom-core' ),
-				),
-				404
-			);
+			return $this->wp_error( 'not_found', __( 'Product not found.', 'phantom-core' ), 404 );
 		}
 
 		if ( ! $product->is_type( 'variable' ) ) {
@@ -2334,24 +2200,12 @@ class Rest_Controller extends \WP_REST_Controller {
 
 	public function get_woo_reviews( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! function_exists( 'wc_get_product' ) ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'woocommerce_inactive',
-					'message' => __( 'WooCommerce is not active.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
 
 		$product_id = absint( $request->get_param( 'product_id' ) );
 		if ( ! $product_id ) {
-			return new \WP_REST_Response(
-				array(
-					'code'    => 'missing_product_id',
-					'message' => __( 'A valid product_id is required.', 'phantom-core' ),
-				),
-				400
-			);
+			return $this->wp_error( 'missing_product_id', __( 'A valid product_id is required.', 'phantom-core' ), 400 );
 		}
 
 		$per_page = max( 1, min( 100, absint( $request->get_param( 'per_page' ) ?: 10 ) ) );

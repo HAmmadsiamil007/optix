@@ -36,12 +36,12 @@ class Plugin {
 			'after_setup_theme',
 			function (): void {
 				register_nav_menus(
-					array(
+					apply_filters( 'phantom_nav_menu_locations', array(
 						'phantom_primary'   => __( 'Primary Menu', 'phantom-core' ),
 						'phantom_secondary' => __( 'Secondary Menu', 'phantom-core' ),
 						'phantom_footer'    => __( 'Footer Menu', 'phantom-core' ),
 						'phantom_mobile'    => __( 'Mobile Menu', 'phantom-core' ),
-					)
+					) )
 				);
 			}
 		);
@@ -61,6 +61,11 @@ class Plugin {
 						'id'          => 'phantom-sidebar-shop',
 						'name'        => __( 'Shop Sidebar', 'phantom-core' ),
 						'description' => __( 'WooCommerce shop sidebar', 'phantom-core' ),
+					),
+					array(
+						'id'          => 'phantom-sidebar-blog',
+						'name'        => __( 'Blog Sidebar', 'phantom-core' ),
+						'description' => __( 'Blog archive/single sidebar', 'phantom-core' ),
 					),
 				);
 

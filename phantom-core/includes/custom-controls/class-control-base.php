@@ -80,4 +80,20 @@ abstract class Control_Base extends \WP_Customize_Control {
         }
         return null;
     }
+
+    public static function get_control_instance( \WP_Customize_Manager $wp_customize, string $type, string $id, array $args = array() ): ?\WP_Customize_Control {
+        $class = self::get_class_for_type( $type );
+        if ( $class && class_exists( $class ) ) {
+            return new $class( $wp_customize, $id, $args );
+        }
+        return null;
+    }
+
+    public function add_control( \WP_Customize_Manager $wp_customize, string $setting_key, array $args ): void {
+        $type     = $args['type'] ?? $this->type;
+        $instance = self::get_control_instance( $wp_customize, $type, $setting_key, $args );
+        if ( $instance ) {
+            $wp_customize->add_control( $instance );
+        }
+    }
 }
