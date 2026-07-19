@@ -90,7 +90,6 @@ class Settings_Registry {
 			$this->section_product_cards(),
 			$this->section_shop_page(),
 			$this->section_product_page(),
-			$this->section_woocommerce(),
 			$this->section_blog(),
 			$this->section_footer(),
 			$this->section_typography(),
@@ -373,7 +372,7 @@ class Settings_Registry {
 			),
 			'general_preloader_enable'     => array(
 				'section'  => 'branding',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Preloader', 'phantom-core' ),
@@ -401,7 +400,7 @@ class Settings_Registry {
 			),
 			'branding_site_tagline_enable' => array(
 				'section'  => 'branding',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Site Tagline', 'phantom-core' ),
@@ -436,7 +435,7 @@ class Settings_Registry {
 			),
 			'branding_preloader_style'     => array(
 				'section'  => 'branding',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'spinner',
 				'options'  => array(
 					'spinner' => 'Spinner',
@@ -449,9 +448,9 @@ class Settings_Registry {
 			),
 			'branding_browser_theme_color' => array(
 				'section'  => 'branding',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#ffffff',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#ffffff'; },
 				'label'    => __( 'Browser Theme Color', 'phantom-core' ),
 			),
 			'branding_logo_max_height'     => array(
@@ -470,9 +469,9 @@ class Settings_Registry {
 			),
 			'branding_preloader_bg'        => array(
 				'section'  => 'branding',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#ffffff',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#ffffff'; },
 				'label'    => __( 'Preloader Background', 'phantom-core' ),
 			),
 		);
@@ -480,6 +479,52 @@ class Settings_Registry {
 
 	private function section_header(): array {
 		return array(
+			'display_header'                => array(
+				'section'  => 'header',
+				'type'     => 'ast-toggle',
+				'default'  => 1,
+				'sanitize' => 'absint',
+				'label'    => __( 'Display Header', 'phantom-core' ),
+			),
+			'header_style'                  => array(
+				'section'      => 'header',
+				'type'         => 'ast-select',
+				'default'      => 'default',
+				'options'      => array(
+					'default'     => 'Default',
+					'sticky'      => 'Sticky',
+					'transparent' => 'Transparent',
+				),
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Header Style', 'phantom-core' ),
+				'dependencies' => array(
+					array( 'key' => 'display_header', 'value' => true ),
+				),
+				'partial'      => array(
+					'selector'        => 'header.site-header',
+					'render_callback' => 'phantom_render_header_partial',
+				),
+			),
+			'header_sticky_bg'              => array(
+				'section'      => 'header',
+				'type'         => 'ast-color',
+				'default'      => '#ffffff',
+				'sanitize'     => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#ffffff'; },
+				'label'        => __( 'Sticky Header BG', 'phantom-core' ),
+				'dependencies' => array(
+					array( 'key' => 'header_style', 'value' => 'sticky', 'operator' => '===' ),
+				),
+			),
+			'header_transparent_color'      => array(
+				'section'      => 'header',
+				'type'         => 'ast-color',
+				'default'      => 'rgba(255,255,255,0)',
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Transparent Header Color', 'phantom-core' ),
+				'dependencies' => array(
+					array( 'key' => 'header_style', 'value' => 'transparent', 'operator' => '===' ),
+				),
+			),
 			'header_logo'                   => array(
 				'section'  => 'header',
 				'type'     => 'string',
@@ -496,7 +541,7 @@ class Settings_Registry {
 			),
 			'header_sticky'                 => array(
 				'section'  => 'header',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Sticky Header', 'phantom-core' ),
@@ -543,16 +588,26 @@ class Settings_Registry {
 				'sanitize' => 'absint',
 				'label'    => __( 'Menu Font Size', 'phantom-core' ),
 			),
-			'search_placeholder'            => array(
+			'enable_live_search'            => array(
 				'section'  => 'header',
-				'type'     => 'string',
-				'default'  => 'Search products...',
-				'sanitize' => 'sanitize_text_field',
-				'label'    => __( 'Search Placeholder', 'phantom-core' ),
+				'type'     => 'ast-toggle',
+				'default'  => 1,
+				'sanitize' => 'absint',
+				'label'    => __( 'Enable Live Search', 'phantom-core' ),
+			),
+			'search_placeholder'            => array(
+				'section'      => 'header',
+				'type'         => 'string',
+				'default'      => 'Search products...',
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Search Placeholder', 'phantom-core' ),
+				'dependencies' => array(
+					array( 'key' => 'enable_live_search', 'value' => true ),
+				),
 			),
 			'header_layout'                 => array(
 				'section'  => 'header',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'default',
 				'options'  => array(
 					'default'     => 'Default',
@@ -565,7 +620,7 @@ class Settings_Registry {
 			),
 			'header_bg'                     => array(
 				'section'      => 'header',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Header Background', 'phantom-core' ),
@@ -574,7 +629,7 @@ class Settings_Registry {
 			),
 			'header_text_color'             => array(
 				'section'      => 'header',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#222222',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Header Text Color', 'phantom-core' ),
@@ -589,6 +644,7 @@ class Settings_Registry {
 				'label'        => __( 'Header Padding Top/Bottom', 'phantom-core' ),
 				'css_property' => '--header-padding-y',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'header_padding_x'              => array(
 				'section'      => 'header',
@@ -598,10 +654,11 @@ class Settings_Registry {
 				'label'        => __( 'Header Padding Left/Right', 'phantom-core' ),
 				'css_property' => '--header-padding-x',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'header_border_color'           => array(
 				'section'      => 'header',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#e5e5e5',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Header Border Color', 'phantom-core' ),
@@ -651,9 +708,9 @@ class Settings_Registry {
 			),
 			'header_banner_overlay_color'   => array(
 				'section'  => 'header',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#000000',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#000000'; },
 				'label'    => __( 'Banner Overlay Color', 'phantom-core' ),
 			),
 			'header_banner_overlay_opacity' => array(
@@ -677,7 +734,7 @@ class Settings_Registry {
 		return array(
 			'topbar_enable'     => array(
 				'section'  => 'topbar',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Top Bar', 'phantom-core' ),
@@ -691,16 +748,16 @@ class Settings_Registry {
 			),
 			'topbar_bg'         => array(
 				'section'  => 'topbar',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#222222',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#222222'; },
 				'label'    => __( 'Top Bar Background', 'phantom-core' ),
 			),
 			'topbar_text'       => array(
 				'section'  => 'topbar',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#ffffff',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#ffffff'; },
 				'label'    => __( 'Top Bar Text Color', 'phantom-core' ),
 			),
 			'topbar_languages'  => array(
@@ -818,7 +875,7 @@ class Settings_Registry {
 			),
 			'menu_layout'                     => array(
 				'section'  => 'navigation',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'horizontal',
 				'options'  => array(
 					'horizontal' => 'Horizontal',
@@ -837,7 +894,7 @@ class Settings_Registry {
 			),
 			'menu_animation'                  => array(
 				'section'  => 'navigation',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'fade',
 				'options'  => array(
 					'fade'     => 'Fade',
@@ -856,7 +913,7 @@ class Settings_Registry {
 			),
 			'nav_sticky_enable'               => array(
 				'section'  => 'navigation',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Sticky Nav', 'phantom-core' ),
@@ -870,7 +927,7 @@ class Settings_Registry {
 			),
 			'nav_mobile_menu_style'           => array(
 				'section'  => 'navigation',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'hamburger',
 				'options'  => array(
 					'hamburger' => 'Hamburger',
@@ -907,7 +964,7 @@ class Settings_Registry {
 			),
 			'nav_menu_align'                  => array(
 				'section'  => 'navigation',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'left',
 				'options'  => array(
 					'left'   => 'Left',
@@ -919,21 +976,21 @@ class Settings_Registry {
 			),
 			'nav_show_search'                 => array(
 				'section'  => 'navigation',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Search', 'phantom-core' ),
 			),
 			'nav_show_cart'                   => array(
 				'section'  => 'navigation',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Cart', 'phantom-core' ),
 			),
 			'nav_submenu_animation'           => array(
 				'section'  => 'navigation',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'fade',
 				'options'  => array(
 					'fade'  => 'Fade',
@@ -950,7 +1007,7 @@ class Settings_Registry {
 		return array(
 			'home_banner_enable'      => array(
 				'section'  => 'hero',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Hero', 'phantom-core' ),
@@ -1020,14 +1077,14 @@ class Settings_Registry {
 			),
 			'hero_overlay_enable'     => array(
 				'section'  => 'hero',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Overlay', 'phantom-core' ),
 			),
 			'hero_overlay_color'      => array(
 				'section'      => 'hero',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#000000',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Overlay Color', 'phantom-core' ),
@@ -1045,7 +1102,7 @@ class Settings_Registry {
 		return array(
 			'home_categories_enable'  => array(
 				'section'  => 'collections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Categories', 'phantom-core' ),
@@ -1111,7 +1168,7 @@ class Settings_Registry {
 			),
 			'collections_layout'      => array(
 				'section'  => 'collections',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'grid',
 				'options'  => array(
 					'grid'     => 'Grid',
@@ -1134,7 +1191,7 @@ class Settings_Registry {
 		return array(
 			'home_promotion_enable'          => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Promotion', 'phantom-core' ),
@@ -1186,7 +1243,7 @@ class Settings_Registry {
 			),
 			'home_products_enable'           => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Products', 'phantom-core' ),
@@ -1235,7 +1292,7 @@ class Settings_Registry {
 			),
 			'home_cta_enable'                => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable CTA', 'phantom-core' ),
@@ -1270,7 +1327,7 @@ class Settings_Registry {
 			),
 			'home_top_selling_enable'        => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Top Selling', 'phantom-core' ),
@@ -1291,7 +1348,7 @@ class Settings_Registry {
 			),
 			'home_testimonials_enable'       => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Testimonials', 'phantom-core' ),
@@ -1349,7 +1406,7 @@ class Settings_Registry {
 			),
 			'home_instagram_enable'          => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Instagram', 'phantom-core' ),
@@ -1395,7 +1452,7 @@ class Settings_Registry {
 			),
 			'home_benefits_enable'           => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Benefits', 'phantom-core' ),
@@ -1427,7 +1484,7 @@ class Settings_Registry {
 			),
 			'home_brands_enable'             => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Brands', 'phantom-core' ),
@@ -1449,7 +1506,7 @@ class Settings_Registry {
 			),
 			'home_hero_layout'               => array(
 				'section'  => 'home_sections',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'default',
 				'options'  => array(
 					'default'    => 'Default',
@@ -1462,7 +1519,7 @@ class Settings_Registry {
 			),
 			'home_hero_height'               => array(
 				'section'  => 'home_sections',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'full',
 				'options'  => array(
 					'full' => 'Full Screen',
@@ -1481,7 +1538,7 @@ class Settings_Registry {
 			),
 			'home_hero_parallax'             => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Parallax', 'phantom-core' ),
@@ -1495,7 +1552,7 @@ class Settings_Registry {
 			),
 			'home_slider_enable'             => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Slider', 'phantom-core' ),
@@ -1510,7 +1567,7 @@ class Settings_Registry {
 			),
 			'home_features_enable'           => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Features Section', 'phantom-core' ),
@@ -1539,7 +1596,7 @@ class Settings_Registry {
 			),
 			'home_blog_enable'               => array(
 				'section'  => 'home_sections',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Blog Section', 'phantom-core' ),
@@ -1588,7 +1645,7 @@ class Settings_Registry {
 			),
 			'card_image_ratio'     => array(
 				'section'  => 'product_cards',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => '1:1',
 				'options'  => array(
 					'1:1'      => '1:1',
@@ -1601,7 +1658,7 @@ class Settings_Registry {
 			),
 			'card_hover_effect'    => array(
 				'section'  => 'product_cards',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'zoom',
 				'options'  => array(
 					'none'  => 'None',
@@ -1614,14 +1671,14 @@ class Settings_Registry {
 			),
 			'card_quick_view'      => array(
 				'section'  => 'product_cards',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Quick View', 'phantom-core' ),
 			),
 			'card_sale_badge'      => array(
 				'section'  => 'product_cards',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Sale Badge', 'phantom-core' ),
@@ -1635,14 +1692,14 @@ class Settings_Registry {
 			),
 			'card_show_rating'     => array(
 				'section'  => 'product_cards',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Rating', 'phantom-core' ),
 			),
 			'card_show_cart_btn'   => array(
 				'section'  => 'product_cards',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Cart Button', 'phantom-core' ),
@@ -1668,21 +1725,21 @@ class Settings_Registry {
 			),
 			'shop_enable_sidebar'    => array(
 				'section'  => 'shop_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Sidebar', 'phantom-core' ),
 			),
 			'shop_enable'            => array(
 				'section'  => 'shop_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => true,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Shop', 'phantom-core' ),
 			),
 			'shop_layout'            => array(
 				'section'  => 'shop_page',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'sidebar-left',
 				'options'  => array(
 					'full-width'    => 'Full Width',
@@ -1694,7 +1751,7 @@ class Settings_Registry {
 			),
 			'shop_pagination'        => array(
 				'section'  => 'shop_page',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'numbered',
 				'options'  => array(
 					'numbered'        => 'Numbered',
@@ -1706,14 +1763,14 @@ class Settings_Registry {
 			),
 			'shop_results_count'     => array(
 				'section'  => 'shop_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Results Count', 'phantom-core' ),
 			),
 			'shop_sorting'           => array(
 				'section'  => 'shop_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Sorting Dropdown', 'phantom-core' ),
@@ -1727,10 +1784,47 @@ class Settings_Registry {
 			),
 			'show_shop_toolbar'      => array(
 				'section'  => 'shop_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Shop Toolbar', 'phantom-core' ),
+			),
+			'enable_quick_view'      => array(
+				'section'  => 'shop_page',
+				'type'     => 'ast-toggle',
+				'default'  => 1,
+				'sanitize' => 'absint',
+				'label'    => __( 'Enable Quick View', 'phantom-core' ),
+			),
+			'product_quick_view'     => array(
+				'section'      => 'shop_page',
+				'type'         => 'ast-select',
+				'default'      => 'modal',
+				'options'      => array(
+					'modal'  => 'Modal',
+					'slide'  => 'Slide In',
+				),
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Quick View Style', 'phantom-core' ),
+				'dependencies' => array(
+					array( 'key' => 'enable_quick_view', 'value' => true ),
+				),
+			),
+			'product_grid_layout'    => array(
+				'section'  => 'shop_page',
+				'type'     => 'ast-select',
+				'default'  => 'grid',
+				'options'  => array(
+					'grid'   => 'Grid',
+					'list'   => 'List',
+					'masonry' => 'Masonry',
+				),
+				'sanitize' => 'sanitize_text_field',
+				'label'    => __( 'Product Grid Layout', 'phantom-core' ),
+				'partial'  => array(
+					'selector'        => '.products-container',
+					'render_callback' => 'phantom_render_search_partial',
+				),
 			),
 		);
 	}
@@ -2012,7 +2106,7 @@ class Settings_Registry {
 			),
 			'product_layout'                            => array(
 				'section'  => 'product_page',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'standard',
 				'sanitize' => 'sanitize_text_field',
 				'label'    => __( 'Product Layout', 'phantom-core' ),
@@ -2123,14 +2217,14 @@ class Settings_Registry {
 			),
 			'cart_coupon_enable'         => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Coupon', 'phantom-core' ),
 			),
 			'cart_cross_sell_enable'     => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Cross-sell', 'phantom-core' ),
@@ -2214,14 +2308,14 @@ class Settings_Registry {
 			),
 			'shop_catalog_mode'          => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Catalog Mode', 'phantom-core' ),
 			),
 			'shop_cart_icon_style'       => array(
 				'section'  => 'woocommerce',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'default',
 				'options'  => array(
 					'default' => 'Default',
@@ -2233,28 +2327,28 @@ class Settings_Registry {
 			),
 			'shop_wishlist_enable'       => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Wishlist', 'phantom-core' ),
 			),
 			'shop_product_image_zoom'    => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Image Zoom', 'phantom-core' ),
 			),
 			'shop_variant_swatches'      => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Variant Swatches', 'phantom-core' ),
 			),
 			'shop_stock_display'         => array(
 				'section'  => 'woocommerce',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'always',
 				'options'  => array(
 					'always'       => 'Always',
@@ -2266,28 +2360,28 @@ class Settings_Registry {
 			),
 			'shop_review_enable'         => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Reviews', 'phantom-core' ),
 			),
 			'shop_ajax_add_to_cart'      => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'AJAX Add to Cart', 'phantom-core' ),
 			),
 			'shop_minicart_enable'       => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Mini Cart', 'phantom-core' ),
 			),
 			'shop_checkout_style'        => array(
 				'section'  => 'woocommerce',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'multi-step',
 				'options'  => array(
 					'multi-step'  => 'Multi Step',
@@ -2298,14 +2392,14 @@ class Settings_Registry {
 			),
 			'shop_order_tracking_enable' => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Order Tracking', 'phantom-core' ),
 			),
 			'shop_sale_flash_style'      => array(
 				'section'  => 'woocommerce',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'circle',
 				'options'  => array(
 					'circle' => 'Circle',
@@ -2317,7 +2411,7 @@ class Settings_Registry {
 			),
 			'shop_show_stock_badge'      => array(
 				'section'  => 'woocommerce',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Stock Badge', 'phantom-core' ),
@@ -2329,7 +2423,7 @@ class Settings_Registry {
 		return array(
 			'blog_enable'                           => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Blog', 'phantom-core' ),
@@ -2357,41 +2451,71 @@ class Settings_Registry {
 				'label'    => __( 'Blog Tabs', 'phantom-core' ),
 			),
 			'blog_layout'                           => array(
-				'section'  => 'blog',
-				'type'     => 'select',
-				'default'  => 'grid',
-				'options'  => array(
+				'section'      => 'blog',
+				'type'         => 'ast-select',
+				'default'      => 'grid',
+				'options'      => array(
 					'grid'    => 'Grid',
 					'list'    => 'List',
 					'classic' => 'Classic',
 				),
-				'sanitize' => 'sanitize_text_field',
-				'label'    => __( 'Blog Layout', 'phantom-core' ),
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Blog Layout', 'phantom-core' ),
+				'partial'      => array(
+					'selector' => '.blog-container',
+					'render_callback' => 'phantom_render_blog_partial',
+				),
 			),
 			'blog_show_sidebar'                     => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Sidebar', 'phantom-core' ),
 			),
 			'blog_show_featured_image'              => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Featured Image', 'phantom-core' ),
 			),
+			'display_post_meta'                     => array(
+				'section'  => 'blog',
+				'type'     => 'ast-toggle',
+				'default'  => 1,
+				'sanitize' => 'absint',
+				'label'    => __( 'Display Post Meta', 'phantom-core' ),
+			),
+			'blog_meta_layout'                    => array(
+				'section'      => 'blog',
+				'type'         => 'ast-select',
+				'default'      => 'inline',
+				'options'      => array(
+					'inline'  => 'Inline',
+					'stacked' => 'Stacked',
+					'minimal' => 'Minimal',
+				),
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Post Meta Layout', 'phantom-core' ),
+				'dependencies' => array(
+					array( 'key' => 'display_post_meta', 'value' => true ),
+				),
+				'partial'      => array(
+					'selector'        => '.blog-post-meta',
+					'render_callback' => 'phantom_render_blog_partial',
+				),
+			),
 			'blog_show_author'                      => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Author', 'phantom-core' ),
 			),
 			'single_blog_show_related'              => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Related Posts', 'phantom-core' ),
@@ -2419,35 +2543,35 @@ class Settings_Registry {
 			),
 			'blog_show_date'                        => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Date', 'phantom-core' ),
 			),
 			'blog_show_categories'                  => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Categories', 'phantom-core' ),
 			),
 			'blog_show_tags'                        => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Tags', 'phantom-core' ),
 			),
 			'blog_enable_comments'                  => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Comments', 'phantom-core' ),
 			),
 			'blog_show_author_box'                  => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Author Box', 'phantom-core' ),
@@ -2461,7 +2585,7 @@ class Settings_Registry {
 			),
 			'blog_sidebar_position'                 => array(
 				'section'  => 'blog',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'right',
 				'options'  => array(
 					'left'  => 'Left',
@@ -2472,7 +2596,7 @@ class Settings_Registry {
 			),
 			'blog_sticky_sidebar'                   => array(
 				'section'  => 'blog',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Sticky Sidebar', 'phantom-core' ),
@@ -2640,7 +2764,7 @@ class Settings_Registry {
 			),
 			'blog_single_layout'                    => array(
 				'section'  => 'blog',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'full',
 				'sanitize' => 'sanitize_text_field',
 				'label'    => __( 'Single Post Layout', 'phantom-core' ),
@@ -2648,7 +2772,7 @@ class Settings_Registry {
 			),
 			'blog_archive_layout'                   => array(
 				'section'  => 'blog',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'grid',
 				'sanitize' => 'sanitize_text_field',
 				'label'    => __( 'Archive Layout', 'phantom-core' ),
@@ -2739,7 +2863,7 @@ class Settings_Registry {
 			),
 			'footer_text'                 => array(
 				'section'      => 'footer',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#999999',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Text Color', 'phantom-core' ),
@@ -2748,7 +2872,7 @@ class Settings_Registry {
 			),
 			'footer_heading_text'         => array(
 				'section'      => 'footer',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Heading Color', 'phantom-core' ),
@@ -2757,7 +2881,7 @@ class Settings_Registry {
 			),
 			'footer_link'                 => array(
 				'section'      => 'footer',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#cccccc',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Link Color', 'phantom-core' ),
@@ -2836,7 +2960,7 @@ class Settings_Registry {
 			),
 			'footer_enable'               => array(
 				'section'  => 'footer',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Footer', 'phantom-core' ),
@@ -2850,7 +2974,7 @@ class Settings_Registry {
 			),
 			'footer_width'                => array(
 				'section'  => 'footer',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'full',
 				'options'  => array(
 					'full'      => 'Full Width',
@@ -2862,14 +2986,14 @@ class Settings_Registry {
 			),
 			'footer_border_enable'        => array(
 				'section'  => 'footer',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Footer Border', 'phantom-core' ),
 			),
 			'footer_border_color'         => array(
 				'section'      => 'footer',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#333333',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Footer Border Color', 'phantom-core' ),
@@ -2878,7 +3002,7 @@ class Settings_Registry {
 			),
 			'footer_bg_color'             => array(
 				'section'      => 'footer',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#222222',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Footer Background', 'phantom-core' ),
@@ -2887,53 +3011,67 @@ class Settings_Registry {
 			),
 			'footer_scroll_to_top_enable' => array(
 				'section'  => 'footer',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Scroll to Top', 'phantom-core' ),
 			),
 			'footer_scroll_to_top_color'  => array(
 				'section'  => 'footer',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#ffffff',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#ffffff'; },
 				'label'    => __( 'Scroll to Top Icon Color', 'phantom-core' ),
 			),
 			'footer_scroll_to_top_bg'     => array(
 				'section'  => 'footer',
-				'type'     => 'color',
+				'type'     => 'ast-color',
 				'default'  => '#705b53',
-				'sanitize' => 'sanitize_hex_color',
+				'sanitize' => function ( $v ) { return preg_match( '/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', $v ) ? $v : '#705b53'; },
 				'label'    => __( 'Scroll to Top Background', 'phantom-core' ),
 			),
 			'footer_social_enable'        => array(
 				'section'  => 'footer',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Social Links', 'phantom-core' ),
 			),
 			'footer_newsletter_enable'    => array(
 				'section'  => 'footer',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Newsletter', 'phantom-core' ),
 			),
 			'footer_bottom_bar_enable'    => array(
 				'section'  => 'footer',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Bottom Bar', 'phantom-core' ),
 			),
-			'footer_layout'               => array(
+			'display_footer'              => array(
 				'section'  => 'footer',
-				'type'     => 'select',
-				'default'  => '3-col',
-				'sanitize' => 'sanitize_text_field',
-				'label'    => __( 'Footer Layout', 'phantom-core' ),
-				'choices'  => array( '1-col' => '1 Column', '2-col' => '2 Columns', '3-col' => '3 Columns', '4-col' => '4 Columns' ),
+				'type'     => 'ast-toggle',
+				'default'  => 1,
+				'sanitize' => 'absint',
+				'label'    => __( 'Display Footer', 'phantom-core' ),
+			),
+			'footer_layout'               => array(
+				'section'      => 'footer',
+				'type'         => 'ast-select',
+				'default'      => '3-col',
+				'sanitize'     => 'sanitize_text_field',
+				'label'        => __( 'Footer Layout', 'phantom-core' ),
+				'choices'      => array( '1-col' => '1 Column', '2-col' => '2 Columns', '3-col' => '3 Columns', '4-col' => '4 Columns' ),
+				'dependencies' => array(
+					array( 'key' => 'display_footer', 'value' => true ),
+				),
+				'partial'      => array(
+					'selector' => '.footer-content',
+					'render_callback' => 'phantom_render_footer_partial',
+				),
 			),
 		);
 	}
@@ -3173,7 +3311,7 @@ class Settings_Registry {
 		return array(
 			'color_primary'    => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#7635d5',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Primary Color', 'phantom-core' ),
@@ -3182,7 +3320,7 @@ class Settings_Registry {
 			),
 			'color_secondary'  => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Secondary Color', 'phantom-core' ),
@@ -3191,7 +3329,7 @@ class Settings_Registry {
 			),
 			'color_accent'     => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#fcd668',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Accent Color', 'phantom-core' ),
@@ -3200,7 +3338,7 @@ class Settings_Registry {
 			),
 			'color_text'       => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#4e4e4e',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Text Color', 'phantom-core' ),
@@ -3209,7 +3347,7 @@ class Settings_Registry {
 			),
 			'color_heading'    => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#3f3f3f',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Heading Color', 'phantom-core' ),
@@ -3218,7 +3356,7 @@ class Settings_Registry {
 			),
 			'color_background' => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Background Color', 'phantom-core' ),
@@ -3227,7 +3365,7 @@ class Settings_Registry {
 			),
 			'color_header_bg'  => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Header Background', 'phantom-core' ),
@@ -3236,7 +3374,7 @@ class Settings_Registry {
 			),
 			'color_footer_bg'  => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#222222',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Footer Background', 'phantom-core' ),
@@ -3245,7 +3383,7 @@ class Settings_Registry {
 			),
 			'color_link'       => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#705b53',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Link Color', 'phantom-core' ),
@@ -3254,7 +3392,7 @@ class Settings_Registry {
 			),
 			'color_link_hover' => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#c19a6b',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Link Hover', 'phantom-core' ),
@@ -3263,7 +3401,7 @@ class Settings_Registry {
 			),
 			'color_border'     => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#e5e5e5',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Border Color', 'phantom-core' ),
@@ -3272,7 +3410,7 @@ class Settings_Registry {
 			),
 			'color_sale'       => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#e74c3c',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Sale Color', 'phantom-core' ),
@@ -3281,7 +3419,7 @@ class Settings_Registry {
 			),
 			'color_light_bg'     => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#f8f5fd',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Light Background', 'phantom-core' ),
@@ -3290,7 +3428,7 @@ class Settings_Registry {
 			),
 			'color_grey'         => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#d8d8d8',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Grey Color', 'phantom-core' ),
@@ -3299,7 +3437,7 @@ class Settings_Registry {
 			),
 			'color_success'      => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#76a22c',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Success Color', 'phantom-core' ),
@@ -3308,7 +3446,7 @@ class Settings_Registry {
 			),
 			'color_error'        => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#dc3545',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Error Color', 'phantom-core' ),
@@ -3317,7 +3455,7 @@ class Settings_Registry {
 			),
 			'color_warning'      => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffc107',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Warning Color', 'phantom-core' ),
@@ -3326,7 +3464,7 @@ class Settings_Registry {
 			),
 			'color_info'         => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#17a2b8',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Info Color', 'phantom-core' ),
@@ -3335,7 +3473,7 @@ class Settings_Registry {
 			),
 			'color_gradient_start' => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#f4cafe',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Gradient Start', 'phantom-core' ),
@@ -3344,7 +3482,7 @@ class Settings_Registry {
 			),
 			'color_gradient_end'   => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#f4ca5f',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Gradient End', 'phantom-core' ),
@@ -3353,7 +3491,7 @@ class Settings_Registry {
 			),
 			'color_featured_badge' => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ff6b35',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Featured Badge', 'phantom-core' ),
@@ -3362,7 +3500,7 @@ class Settings_Registry {
 			),
 			'color_rating'         => array(
 				'section'      => 'colors',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#f4ca5f',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Star Rating', 'phantom-core' ),
@@ -3376,7 +3514,7 @@ class Settings_Registry {
 		return array(
 			'button_bg'         => array(
 				'section'      => 'buttons',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#7635d5',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Button Background', 'phantom-core' ),
@@ -3385,7 +3523,7 @@ class Settings_Registry {
 			),
 			'button_text'       => array(
 				'section'      => 'buttons',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Button Text', 'phantom-core' ),
@@ -3394,7 +3532,7 @@ class Settings_Registry {
 			),
 			'button_bg_hover'   => array(
 				'section'      => 'buttons',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#5a29a6',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Button Hover BG', 'phantom-core' ),
@@ -3403,7 +3541,7 @@ class Settings_Registry {
 			),
 			'button_text_hover' => array(
 				'section'      => 'buttons',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Button Hover Text', 'phantom-core' ),
@@ -3418,6 +3556,7 @@ class Settings_Registry {
 				'label'        => __( 'Button Radius', 'phantom-core' ),
 				'css_property' => '--button-radius',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'button_padding_y'  => array(
 				'section'      => 'buttons',
@@ -3427,6 +3566,7 @@ class Settings_Registry {
 				'label'        => __( 'Button Padding Y', 'phantom-core' ),
 				'css_property' => '--button-padding-y',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'button_padding_x'  => array(
 				'section'      => 'buttons',
@@ -3436,6 +3576,7 @@ class Settings_Registry {
 				'label'        => __( 'Button Padding X', 'phantom-core' ),
 				'css_property' => '--button-padding-x',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'button_font_size'  => array(
 				'section'      => 'buttons',
@@ -3793,10 +3934,11 @@ class Settings_Registry {
 				'label'        => __( 'Container Width', 'phantom-core' ),
 				'css_property' => '--container-width',
 				'css_selector' => ':root',
+				'responsive'   => true,
 			),
 			'layout_boxed_mode'         => array(
 				'section'  => 'layout',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Boxed Mode', 'phantom-core' ),
@@ -3927,7 +4069,7 @@ class Settings_Registry {
 		return array(
 			'animations_enable'   => array(
 				'section'  => 'animations',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Animations', 'phantom-core' ),
@@ -3948,7 +4090,7 @@ class Settings_Registry {
 			),
 			'animations_easing'   => array(
 				'section'  => 'animations',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'ease-out',
 				'options'  => array(
 					'linear'      => 'Linear',
@@ -3962,7 +4104,7 @@ class Settings_Registry {
 			),
 			'animations_scroll'   => array(
 				'section'  => 'animations',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Scroll Animations', 'phantom-core' ),
@@ -3974,7 +4116,7 @@ class Settings_Registry {
 		return array(
 			'effect_3d_enable'      => array(
 				'section'  => 'effects_3d',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable 3D Effects', 'phantom-core' ),
@@ -4007,21 +4149,21 @@ class Settings_Registry {
 		return array(
 			'search_ajax_enable'  => array(
 				'section'  => 'search',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Ajax Search', 'phantom-core' ),
 			),
 			'search_live_results' => array(
 				'section'  => 'search',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Live Results', 'phantom-core' ),
 			),
 			'search_suggestions'  => array(
 				'section'  => 'search',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Suggestions', 'phantom-core' ),
@@ -4053,6 +4195,21 @@ class Settings_Registry {
 				'sanitize' => 'sanitize_text_field',
 				'label'    => __( 'No Results Message', 'phantom-core' ),
 			),
+			'search_results_layout' => array(
+				'section'  => 'search',
+				'type'     => 'ast-select',
+				'default'  => 'grid',
+				'options'  => array(
+					'grid' => 'Grid',
+					'list' => 'List',
+				),
+				'sanitize' => 'sanitize_text_field',
+				'label'    => __( 'Results Layout', 'phantom-core' ),
+				'partial'  => array(
+					'selector'        => '.search-results-container',
+					'render_callback' => 'phantom_render_search_partial',
+				),
+			),
 		);
 	}
 
@@ -4060,49 +4217,49 @@ class Settings_Registry {
 		return array(
 			'performance_lazy_load'            => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Lazy Load Images', 'phantom-core' ),
 			),
 			'performance_minify_css'           => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Minify CSS', 'phantom-core' ),
 			),
 			'performance_minify_js'            => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Minify JS', 'phantom-core' ),
 			),
 			'performance_defer_js'             => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Defer Non-critical JS', 'phantom-core' ),
 			),
 			'performance_preload_fonts'        => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Preload Fonts', 'phantom-core' ),
 			),
 			'performance_combine_css'          => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Combine CSS Files', 'phantom-core' ),
 			),
 			'performance_dns_prefetch'         => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable DNS Prefetch', 'phantom-core' ),
@@ -4125,14 +4282,14 @@ class Settings_Registry {
 			),
 			'performance_preload_hero'         => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Preload Hero Image', 'phantom-core' ),
 			),
 			'performance_font_display'         => array(
 				'section'  => 'performance',
-				'type'     => 'select',
+				'type'     => 'ast-select',
 				'default'  => 'swap',
 				'options'  => array(
 					'swap'     => 'Swap',
@@ -4145,14 +4302,14 @@ class Settings_Registry {
 			),
 			'performance_remove_wp_emoji'      => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Remove WP Emoji', 'phantom-core' ),
 			),
 			'performance_remove_wp_block_css'  => array(
 				'section'  => 'performance',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Remove Block Library CSS', 'phantom-core' ),
@@ -4164,21 +4321,21 @@ class Settings_Registry {
 		return array(
 			'seo_breadcrumbs_enable' => array(
 				'section'  => 'seo',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Breadcrumbs', 'phantom-core' ),
 			),
 			'seo_schema_enable'      => array(
 				'section'  => 'seo',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Schema Markup', 'phantom-core' ),
 			),
 			'seo_og_enable'          => array(
 				'section'  => 'seo',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Open Graph', 'phantom-core' ),
@@ -4237,28 +4394,28 @@ class Settings_Registry {
 		return array(
 			'a11y_keyboard_nav'  => array(
 				'section'  => 'accessibility',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Keyboard Nav', 'phantom-core' ),
 			),
 			'a11y_skip_links'    => array(
 				'section'  => 'accessibility',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Skip Links', 'phantom-core' ),
 			),
 			'a11y_focus_outline' => array(
 				'section'  => 'accessibility',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Show Focus Outline', 'phantom-core' ),
 			),
 			'a11y_contrast_mode' => array(
 				'section'  => 'accessibility',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'High Contrast Mode', 'phantom-core' ),
@@ -4273,7 +4430,7 @@ class Settings_Registry {
 			),
 			'a11y_high_contrast' => array(
 				'section'  => 'accessibility',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'High Contrast Mode Override', 'phantom-core' ),
@@ -4328,7 +4485,7 @@ class Settings_Registry {
 			),
 			'cookie_enable'       => array(
 				'section'  => 'integrations',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Cookie Notice', 'phantom-core' ),
@@ -4459,7 +4616,7 @@ class Settings_Registry {
 			),
 			'import_export_reset_confirm' => array(
 				'section'  => 'import_export',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Confirm Reset', 'phantom-core' ),
@@ -4471,7 +4628,7 @@ class Settings_Registry {
 		return array(
 			'about_about_enable'      => array(
 				'section'  => 'about_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable About Section', 'phantom-core' ),
@@ -4527,7 +4684,7 @@ class Settings_Registry {
 			),
 			'about_mission_enable'    => array(
 				'section'  => 'about_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Mission', 'phantom-core' ),
@@ -4562,7 +4719,7 @@ class Settings_Registry {
 			),
 			'about_team_enable'       => array(
 				'section'  => 'about_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Team', 'phantom-core' ),
@@ -4616,21 +4773,21 @@ class Settings_Registry {
 			),
 			'about_categories_enable' => array(
 				'section'  => 'about_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Categories', 'phantom-core' ),
 			),
 			'about_instagram_enable'  => array(
 				'section'  => 'about_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Instagram', 'phantom-core' ),
 			),
 			'about_benefits_enable'   => array(
 				'section'  => 'about_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Benefits', 'phantom-core' ),
@@ -4755,7 +4912,7 @@ class Settings_Registry {
 		return array(
 			'faq_enable'           => array(
 				'section'  => 'faq_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable FAQ', 'phantom-core' ),
@@ -4784,14 +4941,14 @@ class Settings_Registry {
 			),
 			'faq_instagram_enable' => array(
 				'section'  => 'faq_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Instagram', 'phantom-core' ),
 			),
 			'faq_benefits_enable'  => array(
 				'section'  => 'faq_page',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 1,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Benefits', 'phantom-core' ),
@@ -4831,7 +4988,7 @@ class Settings_Registry {
 			),
 			'maintenance_mode_enable' => array(
 				'section'  => 'coming_soon',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Maintenance', 'phantom-core' ),
@@ -5258,7 +5415,7 @@ class Settings_Registry {
 		return array(
 			'announcement_bar_enable'     => array(
 				'section'  => 'announcement_bar',
-				'type'     => 'bool',
+				'type'     => 'ast-toggle',
 				'default'  => 0,
 				'sanitize' => 'absint',
 				'label'    => __( 'Enable Announcement Bar', 'phantom-core' ),
@@ -5272,7 +5429,7 @@ class Settings_Registry {
 			),
 			'announcement_bar_bg'         => array(
 				'section'      => 'announcement_bar',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#000000',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Background Color', 'phantom-core' ),
@@ -5281,7 +5438,7 @@ class Settings_Registry {
 			),
 			'announcement_bar_text_color' => array(
 				'section'      => 'announcement_bar',
-				'type'         => 'color',
+				'type'     => 'ast-color',
 				'default'      => '#ffffff',
 				'sanitize'     => 'sanitize_hex_color',
 				'label'        => __( 'Text Color', 'phantom-core' ),

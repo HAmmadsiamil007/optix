@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace PhantomCore;
 
 use WP_Customize_Manager;
+use PhantomCore\Customizer\Controls\Control_Base;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,6 +26,7 @@ class Customizer {
 		$this->panels = $this->define_panels();
 		add_action( 'customize_register', array( $this, 'register' ) );
 		add_action( 'customize_preview_init', array( $this, 'preview_js' ) );
+		add_action( 'customize_controls_enqueue_scripts', array( $this, 'controls_js' ) );
 		add_action( 'customize_save_after', array( $this, 'sync_options' ) );
 	}
 
@@ -113,6 +115,7 @@ class Customizer {
 	}
 
 	public function register( WP_Customize_Manager $wp_customize ): void {
+		Control_Base::register_all( $wp_customize );
 		$section_priority = 0;
 
 		foreach ( $this->panels as $panel_id => $panel ) {
@@ -157,6 +160,33 @@ class Customizer {
 		$type = $entry['type'] ?? 'string';
 		$label = $entry['label'] ?? $key;
 		$description = $entry['desc'] ?? '';
+		$custom_types = array( 'ast-color', 'ast-toggle', 'ast-radio-image', 'ast-responsive-slider', 'ast-responsive-spacing', 'ast-typography', 'ast-gradient', 'ast-select', 'ast-color-group', 'ast-background', 'ast-border' );
+
+		if ( in_array( $type, $custom_types, true ) ) {
+			$class = Control_Base::get_class_for_type( $type );
+			if ( $class ) {
+				$input_attrs = $entry['input_attrs'] ?? array();
+				if ( isset( $entry['min'] ) )  $input_attrs['min']  = $entry['min'];
+				if ( isset( $entry['max'] ) )  $input_attrs['max']  = $entry['max'];
+				if ( isset( $entry['step'] ) ) $input_attrs['step'] = $entry['step'];
+				if ( isset( $entry['unit'] ) ) $input_attrs['unit'] = $entry['unit'];
+				if ( isset( $entry['dependencies'] ) ) $input_attrs['data-dependencies'] = $entry['dependencies'];
+				$wp_customize->add_control( new $class(
+					$wp_customize,
+					$setting_id,
+					array(
+						'label'       => $label,
+						'description' => $description,
+						'section'     => $section_id,
+						'settings'    => $setting_id,
+						'priority'    => $priority,
+						'choices'     => $entry['options'] ?? $entry['choices'] ?? array(),
+						'input_attrs' => $input_attrs,
+					)
+				) );
+				return;
+			}
+		}
 
 		switch ( $type ) {
 			case 'color':
@@ -280,22 +310,54 @@ class Customizer {
 			PHANTOM_CORE_VERSION,
 			true
 		);
-		$css_var_map = $this->get_css_var_map();
-		$all_px_keys = Settings_Registry::get_px_keys();
-		$px_keys     = array();
+		$css_var_map    = $this->get_css_var_map();
+		$all_px_keys    = Settings_Registry::get_px_keys();
+		$px_keys        = array();
+		$responsive_keys = array();
 		foreach ( array_keys( $css_var_map ) as $key ) {
 			if ( in_array( $key, $all_px_keys, true ) ) {
 				$px_keys[] = $key;
+			}
+		}
+		foreach ( $this->entries as $ekey => $entry ) {
+			if ( ! empty( $entry['responsive'] ) && isset( $css_var_map[ $ekey ] ) ) {
+				$responsive_keys[] = $ekey;
 			}
 		}
 		wp_localize_script(
 			'phantom-customizer-preview',
 			'PhantomCustomizer',
 			array(
-				'cssVarMap'  => $css_var_map,
-				'cssVarKeys' => array_keys( $css_var_map ),
-				'cssVarPxKeys' => $px_keys,
+				'cssVarMap'      => $css_var_map,
+				'cssVarKeys'     => array_keys( $css_var_map ),
+				'cssVarPxKeys'   => $px_keys,
+				'responsiveKeys' => $responsive_keys,
+				'restUrl'        => rest_url(),
 			)
+		);
+
+		$partials = array();
+		foreach ( $this->entries as $ekey => $entry ) {
+			if ( ! empty( $entry['partial'] ) && is_array( $entry['partial'] ) ) {
+				$partials[ $ekey ] = $entry['partial'];
+			}
+		}
+		if ( ! empty( $partials ) ) {
+			wp_localize_script(
+				'phantom-customizer-preview',
+				'PhantomPartials',
+				$partials
+			);
+		}
+	}
+
+	public function controls_js(): void {
+		wp_enqueue_script(
+			'phantom-customizer-conditionals',
+			PHANTOM_CORE_URL . 'admin/js/customizer-conditionals.js',
+			array( 'jquery', 'customize-controls' ),
+			PHANTOM_CORE_VERSION,
+			true
 		);
 	}
 
@@ -350,12 +412,17 @@ class Customizer {
 	}
 
 	private function get_sanitize_callback( array $entry ): callable {
-		$sanitize = $entry['sanitize'] ?? 'sanitize_text_field';
+		$sanitize = $entry['sanitize'] ?? null;
 		if ( is_callable( $sanitize ) ) {
 			return $sanitize;
 		}
 		if ( is_string( $sanitize ) && function_exists( $sanitize ) ) {
 			return $sanitize;
+		}
+		$type = $entry['type'] ?? 'string';
+		$custom_sanitize = Control_Base::get_sanitize_for_type( $type );
+		if ( $custom_sanitize ) {
+			return $custom_sanitize;
 		}
 		return 'sanitize_text_field';
 	}

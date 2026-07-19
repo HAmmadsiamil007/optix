@@ -1,6 +1,4 @@
 (function($) {
-	var frame;
-
 	$('.phantom-core-color-picker').wpColorPicker();
 
 	$(document).on('click', '.phantom-core-image-upload', function(e) {
@@ -10,12 +8,7 @@
 		var input = container.find('.phantom-core-image-input');
 		var preview = container.find('.phantom-core-image-preview');
 
-		if (frame) {
-			frame.open();
-			return;
-		}
-
-		frame = wp.media({
+		var frame = wp.media({
 			title: phantomCoreAdmin.mediaTitle || 'Choose Image',
 			button: { text: phantomCoreAdmin.mediaButton || 'Use Image' },
 			multiple: false

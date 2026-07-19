@@ -31,26 +31,13 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_settings' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 					'args'                => $this->get_settings_args(),
 				),
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'update_settings' ),
-					'permission_callback' => array( $this, 'permission_check' ),
-					'args'                => $this->get_bulk_update_args(),
-				),
-			)
-		);
-
-		register_rest_route(
-			$this->namespace,
-			'/settings/batch',
-			array(
-				array(
-					'methods'             => \WP_REST_Server::CREATABLE,
-					'callback'            => array( $this, 'update_settings' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 					'args'                => $this->get_bulk_update_args(),
 				),
 			)
@@ -63,19 +50,19 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_setting' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 					'args'                => $this->get_single_args(),
 				),
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( $this, 'update_setting' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 					'args'                => $this->get_single_update_args(),
 				),
 				array(
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'delete_setting' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 					'args'                => $this->get_single_args(),
 				),
 			)
@@ -88,7 +75,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_schema' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 				),
 			)
 		);
@@ -100,7 +87,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_options' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'settings_permission_check' ),
 				),
 			)
 		);
@@ -110,9 +97,9 @@ class Rest_Controller extends \WP_REST_Controller {
 			'/export',
 			array(
 				array(
-					'methods'             => \WP_REST_Server::CREATABLE,
+					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'export_settings' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'admin_permission_check' ),
 				),
 			)
 		);
@@ -124,7 +111,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'import_settings' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'admin_permission_check' ),
 					'args'                => $this->get_import_args(),
 				),
 			)
@@ -137,7 +124,26 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'flush_cache' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'admin_permission_check' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/partial',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_partial' ),
+					'permission_callback' => array( $this, 'partial_permission_check' ),
+					'args'                => array(
+						'partial' => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
 				),
 			)
 		);
@@ -219,7 +225,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_product' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'admin_permission_check' ),
 					'args'                => $this->get_create_product_args(),
 				),
 			)
@@ -250,13 +256,13 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( $this, 'update_product' ),
-					'permission_callback' => array( $this, 'permission_check' ),
-					'args'                => $this->get_create_product_args(),
+					'permission_callback' => array( $this, 'admin_permission_check' ),
+					'args'                => $this->get_update_product_args(),
 				),
 				array(
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'delete_product' ),
-					'permission_callback' => array( $this, 'permission_check' ),
+					'permission_callback' => array( $this, 'admin_permission_check' ),
 					'args'                => $this->get_product_args(),
 				),
 			)
@@ -327,15 +333,59 @@ class Rest_Controller extends \WP_REST_Controller {
 		);
 	}
 
-	public function permission_check(): bool {
+	public function settings_permission_check(): bool {
+		return current_user_can( 'edit_theme_options' );
+	}
+
+	public function admin_permission_check(): bool {
 		return current_user_can( 'manage_options' );
+	}
+
+	public function partial_permission_check(): bool {
+		return current_user_can( 'edit_theme_options' );
+	}
+
+	public function get_partial( \WP_REST_Request $request ): \WP_REST_Response {
+		$partial_key = $request->get_param( 'partial' );
+		$entries     = Settings_Registry::get_instance()->get_entries();
+
+		if ( ! isset( $entries[ $partial_key ] ) || empty( $entries[ $partial_key ]['partial'] ) ) {
+			return new \WP_REST_Response(
+				array( 'code' => 'invalid_partial', 'message' => __( 'Invalid partial key.', 'phantom-core' ) ),
+				400
+			);
+		}
+
+		$partial     = $entries[ $partial_key ]['partial'];
+		$callback    = $partial['render_callback'] ?? '';
+		$selector    = $partial['selector'] ?? '';
+
+		if ( ! $callback || ! function_exists( $callback ) ) {
+			return new \WP_REST_Response(
+				array( 'code' => 'invalid_callback', 'message' => __( 'Render callback not found.', 'phantom-core' ) ),
+				500
+			);
+		}
+
+		ob_start();
+		call_user_func( $callback );
+		$html = ob_get_clean();
+
+		return new \WP_REST_Response(
+			array(
+				'html'     => $html,
+				'key'      => $partial_key,
+				'selector' => $selector,
+			),
+			200
+		);
 	}
 
 	public function get_settings( \WP_REST_Request $request ): \WP_REST_Response {
 		$registry = Settings_Registry::get_instance();
 		$entries  = $registry->get_entries();
 		$section  = $request->get_param( 'section' );
-		$per_page = absint( $request->get_param( 'per_page' ) ?: 50 );
+		$per_page = max( 1, min( 100, absint( $request->get_param( 'per_page' ) ?: 50 ) ) );
 		$page     = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
 
 		if ( ! empty( $section ) ) {
@@ -359,6 +409,9 @@ class Rest_Controller extends \WP_REST_Controller {
 		$response = new \WP_REST_Response( $items, 200 );
 		$response->header( 'X-WP-Total', (string) $total );
 		$response->header( 'X-WP-TotalPages', (string) (int) ceil( $total / $per_page ) );
+		if ( empty( $section ) ) {
+			$this->set_cache_headers( $response, 600 );
+		}
 		return $response;
 	}
 
@@ -366,7 +419,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$key   = sanitize_key( $request->get_param( 'key' ) );
 		$entry = $this->get_entry_or_error( $key );
 		if ( is_wp_error( $entry ) ) {
-			return new \WP_REST_Response( $entry, 404 );
+			return $this->error_response( 'not_found', __( 'Setting not found.', 'phantom-core' ), 404 );
 		}
 		return new \WP_REST_Response( $this->format_entry( $key, $entry ), 200 );
 	}
@@ -404,6 +457,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		\PhantomCore\Customizer::get_instance()->sync_options();
 
 		delete_transient( 'phantom_page_data' );
+		\Phantom_Custom_CSS::flush_cache();
 
 		return new \WP_REST_Response(
 			array(
@@ -418,7 +472,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$key   = sanitize_key( $request->get_param( 'key' ) );
 		$entry = $this->get_entry_or_error( $key );
 		if ( is_wp_error( $entry ) ) {
-			return new \WP_REST_Response( $entry, 404 );
+			return $this->error_response( 'not_found', __( 'Setting not found.', 'phantom-core' ), 404 );
 		}
 
 		$value = $request->get_param( 'value' );
@@ -434,7 +488,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		$key   = sanitize_key( $request->get_param( 'key' ) );
 		$entry = $this->get_entry_or_error( $key );
 		if ( is_wp_error( $entry ) ) {
-			return new \WP_REST_Response( $entry, 404 );
+			return $this->error_response( 'not_found', __( 'Setting not found.', 'phantom-core' ), 404 );
 		}
 
 		$default = $entry['default'] ?? null;
@@ -442,6 +496,8 @@ class Rest_Controller extends \WP_REST_Controller {
 		Settings_Registry::get_instance()->set( $key, $default );
 
 		\PhantomCore\Customizer::get_instance()->sync_options();
+		delete_transient( 'phantom_page_data' );
+		\Phantom_Custom_CSS::flush_cache();
 
 		return new \WP_REST_Response(
 			array(
@@ -451,6 +507,25 @@ class Rest_Controller extends \WP_REST_Controller {
 			),
 			200
 		);
+	}
+
+	public function error_response( string $code, string $message, int $status = 400 ): \WP_REST_Response {
+		return new \WP_REST_Response(
+			array(
+				'code'    => $code,
+				'message' => $message,
+				'status'  => $status,
+			),
+			$status
+		);
+	}
+
+	/**
+	 * Return a WP_Error for REST callbacks. WordPress REST infrastructure
+	 * converts WP_Error to a proper JSON error response automatically.
+	 */
+	public function wp_error( string $code, string $message, int $status = 400 ): \WP_Error {
+		return new \WP_Error( $code, $message, array( 'status' => $status ) );
 	}
 
 	public function get_schema(): \WP_REST_Response {
@@ -497,6 +572,25 @@ class Rest_Controller extends \WP_REST_Controller {
 	}
 
 	public function import_settings( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return $this->error_response( 'unauthorized', __( 'You do not have permission to import settings.', 'phantom-core' ), 403 );
+		}
+
+		$body_json = $request->get_body();
+		if ( strlen( $body_json ) > 5 * 1024 * 1024 ) {
+			return $this->error_response( 'payload_too_large', __( 'Payload exceeds maximum size of 5 MB.', 'phantom-core' ), 413 );
+		}
+
+		$rate_key = 'phantom_import_rate_' . get_current_user_id();
+		$last     = get_transient( $rate_key );
+		if ( false !== $last ) {
+			return $this->error_response(
+				'rate_limited',
+				__( 'Import rate limit reached. Please wait 60 seconds before trying again.', 'phantom-core' ),
+				429
+			);
+		}
+
 		$settings = $request->get_param( 'settings' );
 		if ( ! is_array( $settings ) || empty( $settings ) ) {
 			return new \WP_REST_Response(
@@ -507,6 +601,8 @@ class Rest_Controller extends \WP_REST_Controller {
 				400
 			);
 		}
+
+		set_transient( $rate_key, time(), 60 );
 
 		$registry = Settings_Registry::get_instance();
 		$imported = array();
@@ -549,7 +645,7 @@ class Rest_Controller extends \WP_REST_Controller {
 	}
 
 	public function get_posts( \WP_REST_Request $request ): \WP_REST_Response {
-		$per_page = absint( $request->get_param( 'per_page' ) ?: 10 );
+		$per_page = max( 1, min( 100, absint( $request->get_param( 'per_page' ) ?: 10 ) ) );
 		$page     = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
 		$category = sanitize_text_field( $request->get_param( 'category' ) ?? '' );
 
@@ -592,7 +688,7 @@ class Rest_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		return new \WP_REST_Response(
+		$response = new \WP_REST_Response(
 			array(
 				'posts'      => $posts,
 				'total'      => $query->found_posts,
@@ -601,6 +697,10 @@ class Rest_Controller extends \WP_REST_Controller {
 			),
 			200
 		);
+		$response->header( 'X-WP-Total', (string) $query->found_posts );
+		$response->header( 'X-WP-TotalPages', (string) $query->max_num_pages );
+		$this->set_cache_headers( $response, 600 );
+		return $response;
 	}
 
 	public function get_post_by_slug( \WP_REST_Request $request ): \WP_REST_Response {
@@ -735,7 +835,9 @@ class Rest_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		return new \WP_REST_Response( $items, 200 );
+		$response = new \WP_REST_Response( $items, 200 );
+		$this->set_cache_headers( $response, 3600 );
+		return $response;
 	}
 
 	public function get_menu( \WP_REST_Request $request ): \WP_REST_Response {
@@ -783,7 +885,7 @@ class Rest_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		$per_page    = absint( $request->get_param( 'per_page' ) ?: 12 );
+		$per_page    = max( 1, min( 100, absint( $request->get_param( 'per_page' ) ?: 12 ) ) );
 		$page        = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
 		$category    = sanitize_text_field( $request->get_param( 'category' ) ?? '' );
 		$search      = sanitize_text_field( $request->get_param( 'search' ) ?? '' );
@@ -900,7 +1002,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		}
 		wp_reset_postdata();
 
-		return new \WP_REST_Response(
+		$response = new \WP_REST_Response(
 			array(
 				'products'   => $products,
 				'total'      => $query->found_posts,
@@ -909,6 +1011,10 @@ class Rest_Controller extends \WP_REST_Controller {
 			),
 			200
 		);
+		$response->header( 'X-WP-Total', (string) $query->found_posts );
+		$response->header( 'X-WP-TotalPages', (string) $query->max_num_pages );
+		$this->set_cache_headers( $response, 600 );
+		return $response;
 	}
 
 	public function get_featured_products(): \WP_REST_Response {
@@ -947,7 +1053,9 @@ class Rest_Controller extends \WP_REST_Controller {
 		}
 		wp_reset_postdata();
 
-		return new \WP_REST_Response( $products, 200 );
+		$response = new \WP_REST_Response( $products, 200 );
+		$this->set_cache_headers( $response, 600 );
+		return $response;
 	}
 
 	public function create_product( \WP_REST_Request $request ): \WP_REST_Response {
@@ -1219,7 +1327,7 @@ class Rest_Controller extends \WP_REST_Controller {
 
 		$data['pagination'] = array();
 
-		$product_count = $registry->get_int( 'home_products_count', 6 );
+		$product_count = $registry->get_int( 'home_products_count', 8 );
 		if ( class_exists( 'WooCommerce' ) ) {
 			$products = wc_get_products(
 				array(
@@ -1291,10 +1399,16 @@ class Rest_Controller extends \WP_REST_Controller {
 		} catch ( \Throwable $e ) {
 			defined( 'WP_DEBUG' ) && WP_DEBUG && error_log( 'Phantom Core get_page_data error: ' . $e->getMessage() );
 			return new \WP_REST_Response(
-				new \WP_Error( 'page_data_error', __( 'An unexpected error occurred.', 'phantom-core' ), array( 'status' => 500 ) ),
+				array( 'code' => 'page_data_error', 'message' => __( 'An unexpected error occurred.', 'phantom-core' ), 'status' => 500 ),
 				500
 			);
 		}
+	}
+
+	private function set_cache_headers( \WP_REST_Response $response, int $max_age = 3600 ): void {
+		$etag = md5( serialize( $response->get_data() ) );
+		$response->header( 'Cache-Control', 'public, max-age=' . $max_age . ', must-revalidate' );
+		$response->header( 'ETag', '"' . $etag . '"' );
 	}
 
 	private function format_entry( string $key, array $entry, bool $fresh = false ): array {
@@ -1615,6 +1729,50 @@ class Rest_Controller extends \WP_REST_Controller {
 			$data['images_360']        = ! empty( $raw_360 ) ? array_map( 'trim', explode( ',', $raw_360 ) ) : array();
 		}
 
+		if ( $full && $product->is_type( 'variable' ) ) {
+			$variations = $product->get_available_variations();
+			$var_data   = array();
+			foreach ( $variations as $v ) {
+				$var_data[] = array(
+					'id'            => $v['variation_id'],
+					'attributes'    => $v['attributes'],
+					'price'         => $v['display_price'],
+					'price_html'    => $v['price_html'],
+					'regular_price' => $v['display_regular_price'],
+					'sale_price'    => $v['display_price'] !== $v['display_regular_price'] ? $v['display_price'] : '',
+					'sku'           => $v['sku'],
+					'in_stock'      => $v['is_in_stock'],
+					'image'         => $v['image']['url'] ?? '',
+					'weight'        => $v['weight'],
+					'dimensions'    => $v['dimensions'],
+					'description'   => $v['variation_description'] ?? '',
+				);
+			}
+			$data['variations'] = $var_data;
+
+			$attrs       = $product->get_attributes();
+			$attr_data   = array();
+			foreach ( $attrs as $attr_name => $attr ) {
+				if ( ! $attr->get_variation() ) {
+					continue;
+				}
+				$terms  = wc_get_product_terms( $product->get_id(), $attr_name, array( 'fields' => 'all' ) );
+				$opts   = array();
+				foreach ( $terms as $term ) {
+					$opts[] = array(
+						'slug' => $term->slug,
+						'name' => $term->name,
+					);
+				}
+				$attr_data[] = array(
+					'name'    => wc_attribute_label( $attr_name ),
+					'taxonomy' => $attr_name,
+					'options' => $opts,
+				);
+			}
+			$data['variation_attributes'] = $attr_data;
+		}
+
 		return $data;
 	}
 
@@ -1630,7 +1788,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				'description'       => __( 'Number of items per page.', 'phantom-core' ),
 				'type'              => 'integer',
 				'minimum'           => 1,
-				'maximum'           => 500,
+				'maximum'           => 100,
 				'default'           => 50,
 				'sanitize_callback' => 'absint',
 			),
@@ -1695,12 +1853,15 @@ class Rest_Controller extends \WP_REST_Controller {
 			'per_page' => array(
 				'description'       => __( 'Number of items per page.', 'phantom-core' ),
 				'type'              => 'integer',
+				'minimum'           => 1,
+				'maximum'           => 100,
 				'sanitize_callback' => 'absint',
 				'default'           => 10,
 			),
 			'page' => array(
 				'description'       => __( 'Page number.', 'phantom-core' ),
 				'type'              => 'integer',
+				'minimum'           => 1,
 				'sanitize_callback' => 'absint',
 				'default'           => 1,
 			),
@@ -1718,6 +1879,8 @@ class Rest_Controller extends \WP_REST_Controller {
 			'per_page' => array(
 				'description'       => __( 'Number of products per page.', 'phantom-core' ),
 				'type'              => 'integer',
+				'minimum'           => 1,
+				'maximum'           => 100,
 				'sanitize_callback' => 'absint',
 				'default'           => 12,
 			),
@@ -1735,6 +1898,57 @@ class Rest_Controller extends \WP_REST_Controller {
 			),
 			'search' => array(
 				'description'       => __( 'Search products by keyword.', 'phantom-core' ),
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => '',
+			),
+			'orderby' => array(
+				'description'       => __( 'Sort products by field.', 'phantom-core' ),
+				'type'              => 'string',
+				'enum'              => array( 'price', 'date', 'rating', 'popularity', 'title', 'rand' ),
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => 'date',
+			),
+			'order' => array(
+				'description'       => __( 'Sort order.', 'phantom-core' ),
+				'type'              => 'string',
+				'enum'              => array( 'ASC', 'DESC' ),
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => 'DESC',
+			),
+			'min_price' => array(
+				'description'       => __( 'Minimum price filter.', 'phantom-core' ),
+				'type'              => 'number',
+				'sanitize_callback' => 'floatval',
+				'default'           => 0,
+			),
+			'max_price' => array(
+				'description'       => __( 'Maximum price filter.', 'phantom-core' ),
+				'type'              => 'number',
+				'sanitize_callback' => 'floatval',
+				'default'           => 0,
+			),
+			'on_sale' => array(
+				'description'       => __( 'Filter products on sale.', 'phantom-core' ),
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => false,
+			),
+			'stock_status' => array(
+				'description'       => __( 'Filter by stock status.', 'phantom-core' ),
+				'type'              => 'string',
+				'enum'              => array( 'instock', 'outofstock', 'onbackorder' ),
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => '',
+			),
+			'featured' => array(
+				'description'       => __( 'Filter featured products only.', 'phantom-core' ),
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => false,
+			),
+			'tag' => array(
+				'description'       => __( 'Filter by product tag slug.', 'phantom-core' ),
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => '',
@@ -1833,6 +2047,76 @@ class Rest_Controller extends \WP_REST_Controller {
 				'items'             => array( 'type' => 'string' ),
 			),
 			'categories'       => array(
+				'description'       => __( 'Product category IDs.', 'phantom-core' ),
+				'type'              => 'array',
+				'required'          => false,
+				'items'             => array( 'type' => 'integer' ),
+			),
+		);
+	}
+
+	private function get_update_product_args(): array {
+		return array(
+			'name'              => array(
+				'description'       => __( 'Product name.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'description'       => array(
+				'description'       => __( 'Product description.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'wp_kses_post',
+			),
+			'short_description' => array(
+				'description'       => __( 'Product short description.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'wp_kses_post',
+			),
+			'regular_price'     => array(
+				'description'       => __( 'Product regular price.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'wc_format_decimal',
+			),
+			'sale_price'        => array(
+				'description'       => __( 'Product sale price.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'wc_format_decimal',
+			),
+			'sku'               => array(
+				'description'       => __( 'Product SKU.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'stock_quantity'    => array(
+				'description'       => __( 'Product stock quantity.', 'phantom-core' ),
+				'type'              => 'integer',
+				'required'          => false,
+				'sanitize_callback' => 'absint',
+			),
+			'is_featured'       => array(
+				'description'       => __( 'Whether the product is featured.', 'phantom-core' ),
+				'type'              => 'boolean',
+				'required'          => false,
+			),
+			'video_url'         => array(
+				'description'       => __( 'Product video URL (YouTube, Vimeo, or direct MP4).', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'esc_url_raw',
+			),
+			'images_360'        => array(
+				'description'       => __( '360° spin image URLs.', 'phantom-core' ),
+				'type'              => 'array',
+				'required'          => false,
+				'items'             => array( 'type' => 'string' ),
+			),
+			'categories'        => array(
 				'description'       => __( 'Product category IDs.', 'phantom-core' ),
 				'type'              => 'array',
 				'required'          => false,
@@ -1962,7 +2246,7 @@ class Rest_Controller extends \WP_REST_Controller {
 			);
 		}
 
-		$per_page = absint( $request->get_param( 'per_page' ) ?: 10 );
+		$per_page = max( 1, min( 100, absint( $request->get_param( 'per_page' ) ?: 10 ) ) );
 		$page     = max( 1, absint( $request->get_param( 'page' ) ?: 1 ) );
 
 		$comment_query = new \WP_Comment_Query(
@@ -1976,6 +2260,7 @@ class Rest_Controller extends \WP_REST_Controller {
 		);
 		$comments = $comment_query->comments;
 		$data     = array();
+		$total    = (int) ( wp_count_comments( $product_id )->approved ?? 0 );
 
 		foreach ( $comments as $comment ) {
 			$review = array(
@@ -1993,7 +2278,11 @@ class Rest_Controller extends \WP_REST_Controller {
 			$data[] = $review;
 		}
 
-		return new \WP_REST_Response( $data, 200 );
+		$response = new \WP_REST_Response( $data, 200 );
+		$response->header( 'X-WP-Total', (string) $total );
+		$response->header( 'X-WP-TotalPages', (string) (int) ceil( $total / $per_page ) );
+		$this->set_cache_headers( $response, 600 );
+		return $response;
 	}
 
 	private function get_woo_variations_args(): array {
@@ -2018,12 +2307,15 @@ class Rest_Controller extends \WP_REST_Controller {
 			'per_page' => array(
 				'description'       => __( 'Number of reviews per page.', 'phantom-core' ),
 				'type'              => 'integer',
+				'minimum'           => 1,
+				'maximum'           => 100,
 				'default'           => 10,
 				'sanitize_callback' => 'absint',
 			),
 			'page' => array(
 				'description'       => __( 'Page number.', 'phantom-core' ),
 				'type'              => 'integer',
+				'minimum'           => 1,
 				'default'           => 1,
 				'sanitize_callback' => 'absint',
 			),

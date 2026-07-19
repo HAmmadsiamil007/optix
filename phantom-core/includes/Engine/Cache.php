@@ -34,6 +34,20 @@ final class Cache {
 	}
 
 	public function flush(): void {
-		wp_cache_flush();
+		global $wpdb;
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' ) . '%',
+				$wpdb->esc_like( '_transient_' . $this->prefix ) . '%'
+			)
+		);
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name LIKE %s",
+				$wpdb->esc_like( '_transient_timeout_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . $this->prefix ) . '%'
+			)
+		);
 	}
 }

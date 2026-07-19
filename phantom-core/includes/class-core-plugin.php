@@ -22,6 +22,7 @@ class Plugin {
 		$this->init_registries();
 		$this->register_nav_menus();
 		$this->register_widget_areas();
+		\Phantom_Global_Palette::instance()->init();
 		do_action( 'phantom_core/init' );
 	}
 

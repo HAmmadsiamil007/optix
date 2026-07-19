@@ -3,7 +3,7 @@
  * Plugin Name:       Phantom Core Framework
  * Plugin URI:        https://phantom.test
  * Description:       Core REST API layer for Phantom — settings registry, theme options, customizer, import/export, caching. Backend only — no frontend code.
- * Version:           1.0.2
+ * Version:           1.5.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Phantom
@@ -19,7 +19,7 @@ namespace PhantomCore;
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PHANTOM_CORE_VERSION', '1.0.2' );
+define( 'PHANTOM_CORE_VERSION', '1.5.0' );
 define( 'PHANTOM_CORE_FILE', __FILE__ );
 define( 'PHANTOM_CORE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PHANTOM_CORE_URL', plugin_dir_url( __FILE__ ) );
@@ -32,7 +32,19 @@ spl_autoload_register(
 			return;
 		}
 		$relative_class = substr( $class, $len );
-		$file           = PHANTOM_CORE_PATH . 'includes/' . str_replace( '\\', '/', $relative_class ) . '.php';
+
+		// Custom controls use includes/custom-controls/ with class-{name}.php naming
+		$controls_prefix = 'Customizer\\Controls\\';
+		if ( strncmp( $controls_prefix, $relative_class, strlen( $controls_prefix ) ) === 0 ) {
+			$short = substr( $relative_class, strlen( $controls_prefix ) );
+			$file  = PHANTOM_CORE_PATH . 'includes/custom-controls/class-' . str_replace( '_', '-', strtolower( $short ) ) . '.php';
+			if ( file_exists( $file ) ) {
+				require_once $file;
+				return;
+			}
+		}
+
+		$file = PHANTOM_CORE_PATH . 'includes/' . str_replace( '\\', '/', $relative_class ) . '.php';
 		if ( file_exists( $file ) ) {
 			require_once $file;
 		}
@@ -43,7 +55,14 @@ require_once PHANTOM_CORE_PATH . 'includes/class-settings-registry.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-core-plugin.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-rest-controller.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-customizer.php';
+require_once PHANTOM_CORE_PATH . 'includes/class-custom-css.php';
+require_once PHANTOM_CORE_PATH . 'includes/class-phantom-global-palette.php';
 require_once PHANTOM_CORE_PATH . 'includes/class-phantom-version-compatibility.php';
+require_once PHANTOM_CORE_PATH . 'includes/partial-renderers.php';
+require_once PHANTOM_CORE_PATH . 'includes/custom-css/colors.php';
+require_once PHANTOM_CORE_PATH . 'includes/custom-css/typography.php';
+require_once PHANTOM_CORE_PATH . 'includes/custom-css/header.php';
+require_once PHANTOM_CORE_PATH . 'includes/custom-css/footer.php';
 require_once PHANTOM_CORE_PATH . 'admin/class-settings-page.php';
 
 $rest_path = PHANTOM_CORE_PATH . 'includes/class-rest-controller.php';
@@ -152,3 +171,14 @@ function phantom_enqueue_google_fonts(): void {
 }
 
 add_action( 'wp_enqueue_scripts', 'PhantomCore\\phantom_enqueue_google_fonts', 9 );
+
+/**
+ * Add WooCommerce template path override for SPA shell compatibility.
+ */
+add_filter( 'woocommerce_locate_template', function ( string $template, string $template_name, string $template_path ): string {
+	$plugin_path = PHANTOM_CORE_PATH . 'woocommerce/' . $template_name;
+	if ( file_exists( $plugin_path ) ) {
+		return $plugin_path;
+	}
+	return $template;
+}, 10, 3 );

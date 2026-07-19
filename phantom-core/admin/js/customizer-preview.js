@@ -1,14 +1,56 @@
 (function ($) {
   'use strict';
 
+  var breakpoints = { tablet: 768, mobile: 544 };
+  var responsiveStyleId = 'phantom-responsive-preview';
+
+  var responsiveSheet = null;
+
+  function getResponsiveSheet() {
+    if (responsiveSheet) return responsiveSheet;
+    var el = document.getElementById(responsiveStyleId);
+    if (!el) {
+      el = document.createElement('style');
+      el.id = responsiveStyleId;
+      document.head.appendChild(el);
+    }
+    responsiveSheet = el;
+    return responsiveSheet;
+  }
+
+  function updateResponsiveCss(settingKey, cssVar, newval) {
+    var sheet = getResponsiveSheet();
+    var val = typeof newval === 'object' ? newval : { desktop: newval, tablet: '', mobile: '' };
+    var rules = '';
+
+    function addPx(v) { return /^\d+(\.\d+)?$/.test(v) ? v + 'px' : v; }
+    if (val.desktop) rules += ':root { ' + cssVar + ': ' + addPx(val.desktop) + '; }';
+    if (val.tablet) rules += '@media (max-width: ' + breakpoints.tablet + 'px) { :root { ' + cssVar + ': ' + addPx(val.tablet) + '; } }';
+    if (val.mobile) rules += '@media (max-width: ' + breakpoints.mobile + 'px) { :root { ' + cssVar + ': ' + addPx(val.mobile) + '; } }';
+
+    var regex = new RegExp('\\/\\* ' + settingKey + ' \\*\\/[\\s\\S]*?\\/\\* \\/' + settingKey + ' \\*\\/', 'g');
+    var existing = sheet.textContent || '';
+    if (regex.test(existing)) {
+      existing = existing.replace(regex, '/* ' + settingKey + ' */' + rules + '/* /' + settingKey + ' */');
+    } else {
+      existing += '/* ' + settingKey + ' */' + rules + '/* /' + settingKey + ' */';
+    }
+    sheet.textContent = existing;
+  }
+
   // Auto-bind CSS variables from PHP mapping
   if (typeof PhantomCustomizer !== 'undefined' && PhantomCustomizer.cssVarMap) {
     PhantomCustomizer.cssVarKeys.forEach(function (settingKey) {
       var settingId = 'phantom_' + settingKey;
       var cssVar = PhantomCustomizer.cssVarMap[settingKey];
       var needsPx = PhantomCustomizer.cssVarPxKeys.indexOf(settingKey) !== -1;
+      var isResponsive = PhantomCustomizer.responsiveKeys && PhantomCustomizer.responsiveKeys.indexOf(settingKey) !== -1;
       wp.customize(settingId, function (value) {
         value.bind(function (newval) {
+          if (isResponsive) {
+            updateResponsiveCss(settingKey, cssVar, newval);
+            return;
+          }
           if (needsPx && /^\d+(\.\d+)?$/.test(newval)) newval += 'px';
           document.documentElement.style.setProperty(cssVar, newval);
         });
@@ -147,5 +189,46 @@
       if (el) el.innerHTML = newval.replace('%d', new Date().getFullYear()).replace(/\n/g, '<br>');
     });
   });
+
+  // Selective Refresh - Partials
+  if (typeof PhantomPartials !== 'undefined') {
+    Object.keys(PhantomPartials).forEach(function (key) {
+      var partial = PhantomPartials[key];
+      var settingId = 'phantom_' + key;
+      var selector = partial.selector || '';
+      if (!selector) return;
+
+      wp.customize(settingId, function (value) {
+        value.bind(function () {
+          var url = wp.customize.settings.url ? wp.customize.settings.url.ajax : '';
+          var restUrl = (window.PhantomCustomizer && PhantomCustomizer.restUrl) ? PhantomCustomizer.restUrl : (wp.customize.settings.url || {}).rest_base || '';
+
+          var endpoint = (restUrl ? restUrl.replace(/\/$/, '') : wpApiSettings && wpApiSettings.root ? wpApiSettings.root.replace(/\/$/, '') : '/wp-json') + '/phantom/v1/partial?partial=' + encodeURIComponent(key);
+
+          fetch(endpoint, {
+            credentials: 'same-origin',
+            headers: { 'X-WP-Nonce': wpApiSettings && wpApiSettings.nonce ? wpApiSettings.nonce : '' }
+          })
+          .then(function (r) {
+            if (!r.ok) throw new Error('Partial fetch failed: ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            if (data.html !== undefined) {
+              var target = document.querySelector(selector);
+              if (target) {
+                target.innerHTML = data.html;
+              } else {
+                console.warn('[Phantom Partial] selector not found:', selector);
+              }
+            }
+          })
+          .catch(function (err) {
+            console.warn('[Phantom Partial]', err.message);
+          });
+        });
+      });
+    });
+  }
 
 })(jQuery);

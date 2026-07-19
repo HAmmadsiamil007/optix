@@ -3,7 +3,7 @@
  * Phantom Core Shell
  *
  * @package PhantomCore
- * @version 1.0.2
+ * @version 1.5.0
  */
 
 declare(strict_types=1);
@@ -60,6 +60,19 @@ class Shell {
             'load-more'          => 'load-more.html',
         );
 
+        // WooCommerce SPA shell compatibility filters
+        if ( class_exists( 'WooCommerce' ) ) {
+            add_filter( 'woocommerce_disable_template_redirect', '__return_true' );
+            add_filter( 'woocommerce_cart_redirect_after_add', '__return_false' );
+            add_filter( 'woocommerce_enable_ajax_add_to_cart', '__return_false' );
+            add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_woo_assets' ), 20 );
+        }
+
+        // Cache invalidation on content changes
+        add_action( 'save_post', array( $this, 'invalidate_cache_on_save' ), 10, 1 );
+        add_action( 'delete_post', array( $this, 'invalidate_cache_on_save' ), 10, 1 );
+        add_action( 'woocommerce_delete_product', array( $this, 'invalidate_cache_on_save' ), 10, 1 );
+
         add_action( 'template_redirect', array( $this, 'handle_request' ), 0 );
     }
 
@@ -71,7 +84,7 @@ class Shell {
         }
         $slug = trim( $path, '/' );
 
-		// Bypass: Let WordPress REST API, admin, system files, and static assets pass through
+		// Bypass: Let WordPress REST API, admin, system files, static assets, and WooCommerce URL actions pass through
 		if (
 			strpos( $slug, 'wp-json' ) === 0 ||
 			strpos( $slug, 'wp-admin' ) === 0 ||
@@ -84,6 +97,11 @@ class Shell {
 			0 === strpos( $slug, '.well-known/' ) ||
 			isset( $_GET['rest_route'] ) ||
 			isset( $_GET['wc-ajax'] ) ||
+			isset( $_GET['add-to-cart'] ) ||
+			isset( $_GET['remove_item'] ) ||
+			isset( $_GET['empty_cart'] ) ||
+			isset( $_GET['apply_coupon'] ) ||
+			isset( $_GET['remove_coupon'] ) ||
 			preg_match( '/\.(php|css|js|png|jpg|jpeg|gif|ico|svg|webp|woff2?)(\/.*)?$/', $slug )
 		) {
             status_header( 200 );
@@ -95,9 +113,9 @@ class Shell {
 
         // Disable ALL WordPress frontend output (only when shell serves the page, NOT in Customizer preview)
         if ( ! $is_customizer_preview ) {
-            remove_action( 'wp_head', 'wp_enqueue_scripts', 8 );
-            remove_action( 'wp_head', 'wp_print_styles', 8 );
-            remove_action( 'wp_head', 'wp_print_head_scripts', 9 );
+            remove_action( 'wp_head', 'wp_enqueue_scripts', 1 );
+            remove_action( 'wp_head', 'wp_print_styles', 1 );
+            remove_action( 'wp_head', 'wp_print_head_scripts', 1 );
             remove_action( 'wp_head', 'feed_links', 2 );
             remove_action( 'wp_head', 'rsd_link' );
             remove_action( 'wp_head', 'wlwmanifest_link' );
@@ -110,10 +128,26 @@ class Shell {
         // Handle product detail pages
         if ( preg_match( '/^product\/(.+)$/', $slug, $matches ) ) {
             $template = 'product-detail.html';
+            $product_slug = sanitize_title( $matches[1] );
+            $product_data = get_page_by_path( $product_slug, OBJECT, 'product' );
+            if ( ! $product_data && function_exists( 'wc_get_product_id_by_slug' ) ) {
+                $product_id_by_slug = wc_get_product_id_by_slug( $product_slug );
+                if ( $product_id_by_slug ) {
+                    $_GET['product_id'] = $product_id_by_slug;
+                }
+            }
+            if ( $product_data ) {
+                $_GET['product_id'] = $product_data->ID;
+            }
         }
         // Handle post detail pages
         elseif ( preg_match( '/^blog\/(.+)$/', $slug, $matches ) ) {
             $template = 'single-blog.html';
+            $post_slug = sanitize_title( $matches[1] );
+            $post = get_page_by_path( $post_slug, OBJECT, 'post' );
+            if ( $post ) {
+                $_GET['post_id'] = $post->ID;
+            }
         }
         // Normal route — try exact slug, then strip .html suffix
         else {
@@ -159,6 +193,9 @@ class Shell {
 
 		// Inject frontend editor for admin users
 		$html = $this->inject_editor( $html );
+
+		// Inject PhantomBridge data + script
+		$html = $this->inject_bridge( $html );
 
 		// Plugin compatibility hooks — plugins can inject content before </head> and </body>
 		ob_start();
@@ -334,18 +371,89 @@ class Shell {
             if ( $product_id ) {
                 $product = wc_get_product( $product_id );
                 if ( $product ) {
-                    $json_ld_graph[] = array(
-                        '@type'       => 'Product',
-                        'name'        => $product->get_name(),
-                        'description' => $product->get_short_description(),
-                        'sku'         => $product->get_sku(),
-                        'offers'      => array(
-                            '@type'         => 'Offer',
-                            'price'         => (string) $product->get_price(),
-                            'priceCurrency' => get_woocommerce_currency(),
-                            'availability'  => $product->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-                        ),
+                    $product_url = $product->get_permalink();
+                    $image_id    = $product->get_image_id();
+                    $image_url   = $image_id ? wp_get_attachment_url( $image_id ) : '';
+
+                    $schema_offers = array(
+                        '@type'         => 'Offer',
+                        'price'         => (string) $product->get_price(),
+                        'priceCurrency' => get_woocommerce_currency(),
+                        'availability'  => $product->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+                        'url'           => $product_url,
                     );
+
+                    $product_schema = array(
+                        '@type'       => 'Product',
+                        '@id'         => $product_url . '#product',
+                        'name'        => $product->get_name(),
+                        'description' => $product->get_description() ?: $product->get_short_description(),
+                        'url'         => $product_url,
+                        'sku'         => $product->get_sku(),
+                        'offers'      => $schema_offers,
+                    );
+
+                    if ( $image_url ) {
+                        $product_schema['image'] = $image_url;
+                    }
+
+                    // Add brand if set
+                    $brand = $product->get_attribute( 'brand' );
+                    if ( $brand ) {
+                        $product_schema['brand'] = array(
+                            '@type' => 'Brand',
+                            'name'  => $brand,
+                        );
+                    }
+
+                    // Add mpn for products without SKU
+                    if ( ! $product->get_sku() ) {
+                        $product_schema['mpn'] = (string) $product_id;
+                    }
+
+                    // Add review + aggregateRating if WC reviews enabled
+                    if ( $product->get_review_count() > 0 ) {
+                        $product_schema['aggregateRating'] = array(
+                            '@type'       => 'AggregateRating',
+                            'ratingValue' => (string) $product->get_average_rating(),
+                            'reviewCount' => (string) $product->get_review_count(),
+                        );
+                        $reviews = get_comments( array(
+                            'post_id' => $product_id,
+                            'status'  => 'approve',
+                            'type'    => 'review',
+                            'number'  => 3,
+                        ) );
+                        if ( ! empty( $reviews ) ) {
+                            foreach ( $reviews as $review ) {
+                                $rating = get_comment_meta( $review->comment_ID, 'rating', true );
+                                $product_schema['review'][] = array(
+                                    '@type'       => 'Review',
+                                    'reviewRating' => array(
+                                        '@type'       => 'Rating',
+                                        'ratingValue' => (string) $rating,
+                                        'bestRating'  => '5',
+                                    ),
+                                    'author'      => array(
+                                        '@type' => 'Person',
+                                        'name'  => $review->comment_author,
+                                    ),
+                                    'reviewBody'  => wp_strip_all_tags( $review->comment_content ),
+                                );
+                            }
+                        }
+                    }
+
+                    $json_ld_graph[] = $product_schema;
+
+                    // Product OG meta tags
+                    $meta .= sprintf( '<meta property="og:type" content="product" />' . "\n" );
+                    $meta .= sprintf( '<meta property="og:description" content="%s" />' . "\n", esc_attr( wp_strip_all_tags( $product->get_short_description() ) ) );
+                    $meta .= sprintf( '<meta property="og:image" content="%s" />' . "\n", esc_url( $image_url ) );
+                    $meta .= sprintf( '<meta property="product:price:amount" content="%s" />' . "\n", esc_attr( (string) $product->get_price() ) );
+                    $meta .= sprintf( '<meta property="product:price:currency" content="%s" />' . "\n", esc_attr( get_woocommerce_currency() ) );
+                    $meta .= sprintf( '<meta property="product:retailer_item_id" content="%s" />' . "\n", esc_attr( $product->get_sku() ?: (string) $product_id ) );
+                    $meta .= sprintf( '<meta name="twitter:description" content="%s" />' . "\n", esc_attr( wp_strip_all_tags( $product->get_short_description() ) ) );
                 }
             }
         } elseif ( preg_match( '/^(blog|post|single-blog)/', $slug ) ) {
@@ -518,6 +626,28 @@ class Shell {
 		return $html;
 	}
 
+	private function inject_bridge( string $html ): string {
+		$entries = Settings_Registry::get_instance()->get_entries();
+		$css_map = Settings_Registry::get_instance()->get_css_var_map();
+
+		$data = array();
+		$prefix = 'phantom_';
+		foreach ( $entries as $key => $entry ) {
+			$option_key = $prefix . $key;
+			$data[ $key ] = get_option( $option_key, $entry['default'] ?? '' );
+		}
+		$data['_cssVarMap'] = $css_map;
+
+		$json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+
+		$bridge_url = PHANTOM_CORE_URL . 'frontend/assets/js/phantom-bridge.js?v=' . PHANTOM_CORE_VERSION;
+		$bridge_script = '<script id="phantom-bridge-data" type="application/json">' . $json . '</script>';
+		$bridge_script .= "\n" . '<script src="' . esc_url( $bridge_url ) . '" id="phantom-bridge-js" onload="(function(){var d;try{d=JSON.parse(document.getElementById(\'phantom-bridge-data\').textContent)}catch(e){};PhantomBridge.init({data:d||{}})})()"></script>';
+
+		$html = str_replace( '</body>', $bridge_script . '</body>', $html );
+		return $html;
+	}
+
 	private function inject_google_fonts( string $html ): string {
 		$options     = get_option( 'phantom_options', array() );
 		$body_font   = $options['typography_body_font'] ?? 'Archivo';
@@ -561,5 +691,29 @@ class Shell {
 		$css = preg_replace( '/\s*([{}:;,])\s*/', '$1', $css );
 		$css = preg_replace( '/\s{2,}/', ' ', $css );
 		return trim( $css );
+	}
+
+	/**
+	 * Enqueue WooCommerce variation script on product detail pages.
+	 */
+	public function enqueue_woo_assets(): void {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return;
+		}
+		$is_product = is_singular( 'product' );
+		if ( $is_product ) {
+			wp_enqueue_script( 'wc-add-to-cart-variation' );
+		}
+	}
+
+	/**
+	 * Invalidate REST API cache when content is saved or deleted.
+	 */
+	public function invalidate_cache_on_save( int $post_id ): void {
+		delete_transient( 'phantom_page_data' );
+		$cache_dir = WP_CONTENT_DIR . '/cache/phantom/';
+		if ( is_dir( $cache_dir ) ) {
+			array_map( 'unlink', glob( $cache_dir . '*.css' ) );
+		}
 	}
 }

@@ -161,9 +161,11 @@ class Settings_Page {
 
 		if ( ! empty( $depend ) && is_array( $depend ) ) {
 			$parts = array();
-			foreach ( $depend as $dep_key => $dep_val ) {
-				$parts[] = 'data-depend-on="' . esc_attr( $dep_key ) . '"';
-				$parts[] = 'data-depend-value="' . esc_attr( is_array( $dep_val ) ? implode( ',', $dep_val ) : (string) $dep_val ) . '"';
+			foreach ( $depend as $dep_entry ) {
+				if ( is_array( $dep_entry ) && isset( $dep_entry['key'] ) ) {
+					$parts[] = 'data-depend-on="' . esc_attr( $dep_entry['key'] ) . '"';
+					$parts[] = 'data-depend-value="' . esc_attr( is_array( $dep_entry['value'] ) ? implode( ',', $dep_entry['value'] ) : (string) $dep_entry['value'] ) . '"';
+				}
 			}
 			$data_attr = implode( ' ', $parts );
 		}
@@ -615,22 +617,22 @@ class Settings_Page {
 
 			if ( is_string( $sanitize ) && function_exists( $sanitize ) ) {
 				if ( 'wp_kses_post' === $sanitize ) {
-					$new_value = wp_kses_post( $raw_value );
+					$new_value = wp_kses_post( (string) $raw_value );
 				} elseif ( 'esc_url_raw' === $sanitize ) {
-					$new_value = esc_url_raw( $raw_value );
+					$new_value = esc_url_raw( (string) $raw_value );
 				} elseif ( 'sanitize_hex_color' === $sanitize ) {
-					$new_value = sanitize_hex_color( $raw_value ) ? sanitize_hex_color( $raw_value ) : ( $entry['default'] ?? '' );
+					$new_value = sanitize_hex_color( (string) $raw_value ) ? sanitize_hex_color( (string) $raw_value ) : ( $entry['default'] ?? '' );
 				} elseif ( 'absint' === $sanitize ) {
 					$new_value = absint( $raw_value );
 				} elseif ( 'floatval' === $sanitize || 'float' === $type ) {
 					$new_value = floatval( $raw_value );
 				} else {
-					$new_value = call_user_func( $sanitize, $raw_value );
+					$new_value = is_string( $raw_value ) ? call_user_func( $sanitize, $raw_value ) : sanitize_text_field( (string) $raw_value );
 				}
 			} elseif ( is_callable( $sanitize ) ) {
-				$new_value = call_user_func( $sanitize, $raw_value );
+				$new_value = is_string( $raw_value ) ? call_user_func( $sanitize, $raw_value ) : sanitize_text_field( (string) $raw_value );
 			} else {
-				$new_value = sanitize_text_field( $raw_value );
+				$new_value = sanitize_text_field( (string) $raw_value );
 			}
 
 			$registry->set( $key, $new_value );
