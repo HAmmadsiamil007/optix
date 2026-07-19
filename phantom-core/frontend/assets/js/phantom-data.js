@@ -1327,10 +1327,11 @@
   }
 
   function resolveUrl(val) {
+    var base = (window.phantomData && window.phantomData.plugin_url) || '/wp-content/plugins/phantom-core/';
     if (!val || val.indexOf('http') === 0 || val.indexOf('data:') === 0 || val.indexOf('/wp-content/') === 0) return val;
-    if (val.indexOf('assets/') === 0) return '/wp-content/plugins/phantom-core/frontend/' + val;
-    if (val.indexOf('/') === 0) return '/wp-content/plugins/phantom-core/frontend/assets/images/' + val.replace(/^\//, '');
-    return '/wp-content/plugins/phantom-core/frontend/assets/images/' + val;
+    if (val.indexOf('assets/') === 0) return base + 'frontend/' + val;
+    if (val.indexOf('/') === 0) return base + 'frontend/assets/images/' + val.replace(/^\//, '');
+    return base + 'frontend/assets/images/' + val;
   }
 
   // ─── FOOTER ──────────────────────────────────────────────

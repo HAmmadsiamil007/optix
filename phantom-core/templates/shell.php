@@ -667,6 +667,7 @@ class Shell {
 			$data[ $key ] = get_option( $option_key, $entry['default'] ?? '' );
 		}
 		$data['_cssVarMap'] = $css_map;
+		$data['plugin_url'] = PHANTOM_CORE_URL;
 		$data['can_edit']     = is_user_logged_in() && current_user_can( 'edit_theme_options' );
 		$data['api_nonce']     = wp_create_nonce( 'phantom_api' );
 		$data['auth_nonce']    = wp_create_nonce( 'phantom_auth' );
@@ -674,7 +675,9 @@ class Shell {
 		if ( is_user_logged_in() ) {
 			$current_user            = wp_get_current_user();
 			$data['user_name']       = $current_user->display_name;
-			$data['user_email']      = $current_user->user_email;
+			if ( current_user_can( 'edit_theme_options' ) ) {
+				$data['user_email'] = $current_user->user_email;
+			}
 		}
 
 		$json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );

@@ -516,6 +516,39 @@ class Rest_Controller extends \WP_REST_Controller {
 
 		register_rest_route(
 			$this->namespace,
+			'/contact',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_contact' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'fname' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'email' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_email',
+						'validate_callback' => function ( $v ) { return is_email( $v ); },
+					),
+					'phone' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'message' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
 			'/user/orders',
 			array(
 				'methods'             => \WP_REST_Server::READABLE,
@@ -2741,6 +2774,45 @@ class Rest_Controller extends \WP_REST_Controller {
 				'success'   => true,
 				'message'   => __( 'Logged out successfully.', 'phantom-core' ),
 				'api_nonce' => wp_create_nonce( 'phantom_api' ),
+			),
+			200
+		);
+	}
+
+	public function handle_contact( \WP_REST_Request $request ): \WP_REST_Response {
+		$fname   = sanitize_text_field( $request->get_param( 'fname' ) );
+		$email   = sanitize_email( $request->get_param( 'email' ) );
+		$phone   = sanitize_text_field( $request->get_param( 'phone' ) );
+		$message = sanitize_textarea_field( $request->get_param( 'message' ) );
+
+		if ( empty( $fname ) || empty( $email ) ) {
+			return $this->wp_error( 'missing_fields', __( 'Name and email are required.', 'phantom-core' ), 400 );
+		}
+
+		$admin_email = get_option( 'admin_email' );
+		$subject     = sprintf( __( '[Phantom Core] Contact form submission from %s', 'phantom-core' ), $fname );
+		$body        = sprintf(
+			"Name: %s\nEmail: %s\nPhone: %s\n\nMessage:\n%s",
+			$fname,
+			$email,
+			$phone ?: '—',
+			$message ?: '—'
+		);
+		$headers     = array(
+			'Content-Type: text/plain; charset=UTF-8',
+			'Reply-To: ' . $email,
+		);
+
+		$sent = wp_mail( $admin_email, $subject, $body, $headers );
+
+		if ( ! $sent ) {
+			return $this->wp_error( 'mail_failed', __( 'Could not send message. Please try again.', 'phantom-core' ), 500 );
+		}
+
+		return new \WP_REST_Response(
+			array(
+				'status'  => 'Success',
+				'msg'     => __( 'Your message has been sent. Thank you!', 'phantom-core' ),
 			),
 			200
 		);
