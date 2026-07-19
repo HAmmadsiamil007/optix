@@ -28,7 +28,7 @@ Adding these would bring Phantom Core to the professional multipurpose tier:
 - **3D Effects**: Tilt intensity, perspective, performance (6 settings)
 - **WooCommerce**: Product attributes, variations, reviews APIs (10 settings)
 
-**Total possible additions: ~140 settings** — bringing the total to ~695+ phantom settings (still short of 700+ spec, but within range).
+**Total possible additions: ~140 settings** — bringing the total to ~695+ phantom settings.
 
 ---
 
@@ -57,7 +57,7 @@ Adding these would bring Phantom Core to the professional multipurpose tier:
 | Accessibility | Contrast, Keyboard, ARIA | Body classes |
 | Advanced | Integrations, Custom Code, Import/Export | Refresh |
 
-**Live preview coverage:** 
+**Live preview coverage:**
 - ✅ All `color` type settings → automatic `postMessage`
 - ✅ 7 hero settings → explicit `postMessage`
 - ❌ Everything else → requires page refresh
@@ -84,6 +84,8 @@ Adding these would bring Phantom Core to the professional multipurpose tier:
 - **Dependency logic** — Fields show/hide based on other field values
 
 **Verification:** Nonce + `manage_options` capability check.
+
+**⚠️ Bugfix applied:** Nonce verification was using `sanitize_key()` which mutates the nonce hash before `wp_verify_nonce()`, causing intermittent failures. Fixed to use `wp_unslash()`.
 
 ---
 
@@ -130,7 +132,7 @@ Design tokens are exposed as CSS custom properties on `:root`. This is the bridg
 ### How it works
 
 ```
-Settings_Registry → CSS Var Map → :root { --primary--color: #... }
+Settings_Registry → CSS Var Map (65 vars) → :root { --primary--color: #... }
                                         │
                     ┌────────────────────┼────────────────────┐
                     ▼                    ▼                    ▼
@@ -151,16 +153,16 @@ Settings keys are converted to CSS vars with `--` prefix and `--` as separator:
 | `container_width` | `--container--width` |
 | `button_radius` | `--button--radius` |
 
-### All 63 CSS Var Mappings
+### All 65 CSS Var Mappings
 
-**Header (8):**
-`--header--bg`, `--header--text--color`, `--header--padding--y`, `--header--padding--x`, `--header--border--color`, `--mobile--header--height`, `--header--banner--height`
+**Header (10):**
+`--header--bg`, `--header--text`, `--header--padding`, `--header--padding--x`, `--header--padding--y`, `--header--fullwidth`, `--sticky--header`, `--header--height`, `--header--transparent`, `--submenu--width`
 
 **Navigation (2):**
-`--nav--menu--height`, `--nav--submenu--width`
+`--menu--font--size`, `--menu--font--weight`
 
 **Footer (5):**
-`--footer--text--color`, `--footer--heading--color`, `--footer--link--color`, `--footer--border--color`, `--footer--bg--color`
+`--footer--bg`, `--footer--text`, `--footer--padding`, `--footer--fullwidth`, `--footer--heading`
 
 **Typography (8):**
 `--heading--font`, `--body--font`, `--base--font--size`, `--heading--font--weight`, `--body--font--weight`, `--body--line--height`, `--letter--spacing`, `--text--case`
@@ -169,35 +171,35 @@ Settings keys are converted to CSS vars with `--` prefix and `--` as separator:
 `--primary--color`, `--secondary--color`, `--accent--color`, `--text--color`, `--heading--color`, `--bg--color`, `--header--bg--color`, `--footer--bg--color`, `--link--color`, `--link--hover--color`, `--border--color`, `--sale--color`
 
 **Buttons (8):**
-`--button--bg`, `--button--text--color`, `--button--hover--bg`, `--button--hover--text`, `--button--radius`, `--button--padding--y`, `--button--padding--x`, `--button--font--size`
+`--btn--bg`, `--btn--text`, `--btn--hover--bg`, `--btn--hover--text`, `--border--radius`, `--btn--pad--y`, `--btn--pad--x`, `--btn--font--size`
 
 **Forms (2):**
 `--input--radius`, `--input--height`
 
 **Spacing (6):**
-`--section--padding--y`, `--section--padding--x`, `--container--gutter`, `--content--gap`, `--element--margin`, `--widget--spacing`
+`--section--pad--y`, `--section--pad--x`, `--gap`, `--column--gap`, `--row--gap`
 
 **Layout (5):**
-`--container--width`, `--boxed--width`, `--content--width`, `--sidebar--width`, `--column--count`
+`--container--width`, `--boxed--width`, `--content--width`, `--sidebar--width`, `--columns`
 
 **Responsive (4):**
-`--breakpoint--xl`, `--breakpoint--lg`, `--breakpoint--md`, `--breakpoint--sm`
+`--mobile--breakpoint`, `--tablet--breakpoint`
 
 **Announcement Bar (2):**
 `--announcement--bg`, `--announcement--text--color`
 
 **Misc (1):**
-`--section--spacing`
+`--custom--css`
 
 ### PX Keys (22 numeric values requiring `px` suffix)
 
 ```
-header-padding-y, header-padding-x, mobile-header-height, header-banner-height,
-nav-menu-height, nav-submenu-width, base-font-size, button-radius,
+header-padding, header-padding-y, header-padding-x, header-height,
+submenu-width, menu-font-size, base-font-size, button-radius,
 button-padding-y, button-padding-x, button-font-size, input-radius,
-input-height, section-padding-y, section-padding-x, container-gutter,
-content-gap, element-margin, widget-spacing, container-width, boxed-width,
-sidebar-width
+input-height, section-padding-y, section-padding-x, gap,
+column-gap, row-gap, container-width, boxed-width,
+content-width, sidebar-width
 ```
 
 ### ⚠️ Important: CSS Var Duplication
@@ -206,9 +208,8 @@ The CSS var maps and px key lists are duplicated across 2 files:
 
 | File | Location | What's Duplicated |
 |------|----------|-------------------|
-| `class-customizer.php` | `get_css_var_map()` (~line 260) | 63 var mappings |
-| `class-customizer.php` | `get_inline_css()` px injection (~line 410) | 22 px keys |
-| `templates/shell.php` | `inject_css_variables()` (~line 330) | 63 var mappings + 22 px keys |
+| `class-customizer.php` | `get_css_var_map()` (~line 460) | 65 var mappings |
+| `templates/shell.php` | `inject_css_variables()` (~line 676) | 65 var mappings + 22 px keys |
 
 **Any change to CSS vars must be applied in BOTH files.** There is no shared source of truth.
 
@@ -225,7 +226,7 @@ User sets "primary_color" → update_option('phantom_primary_color', '#ff0000')
 Shell::inject_customizer_css() reads ALL phantom_options from DB
         │
         ▼
-Builds :root { --primary--color: #ff0000; ... } style block (63 vars)
+Builds :root { --primary--color: #ff0000; ... } style block (65 vars)
         │
         ▼
 Injected as <style id="phantom-customizer-css"> before </head>

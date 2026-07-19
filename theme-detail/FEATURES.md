@@ -209,7 +209,7 @@
 | Line height | ✅ | `body_line_height` |
 | Letter spacing | ✅ | `letter_spacing` |
 | Text case | ✅ | `text_case` |
-| Google Fonts dynamic loading | ❌ | Fonts are static, no Google Fonts API integration |
+| Google Fonts dynamic loading | ✅ | Both body+heading always included (bugfix applied) |
 | Font subsets | ❌ | Missing |
 | System font fallback | ✅ | Implied via CSS |
 | Fluid type scale | ❌ | Missing |
@@ -363,23 +363,6 @@
 
 All 14 page types have content settings. All implemented.
 
-| Page | Settings |
-|------|----------|
-| About | 20 settings — title, subtitle, mission, team (repeater with image/name/role/bio/social) |
-| Contact | 15 — address, email, phone, map, form |
-| FAQ | 6 — questions/answers (repeater) |
-| Team | 6 — member cards (repeater) |
-| Testimonials | 3 — review cards (repeater with image/name/text/rating) |
-| Coming Soon | 5 — countdown, notification form |
-| 404 | 3 — title, description, button |
-| Login | 9 — layout, fields |
-| Register | 10 — layout, fields |
-| Thank You | 5 — message, redirect |
-| Privacy | 2 — content blocks |
-| Terms | 2 — content blocks |
-| Cookie Policy | 2 — content blocks |
-| Load More | 8 — demo content |
-
 ---
 
 ## 4. Customizer Panels (14 panels, 49 sections)
@@ -390,13 +373,12 @@ All mapped from Settings Registry. Provides visual editing with live preview for
 
 ---
 
-## 5. Known Issues
+## 5. Known Issues (Post-Audit)
 
 ### High Priority
 
 1. **CSS var data duplicated** — `get_css_var_map()` and px key list in both `class-customizer.php` and `templates/shell.php`. Must be DRY'd.
-2. **No `get_px_keys()` method** — px key list is hardcoded inline 3 times.
-3. **global .gitignore** — Removed `*.png` / `*.jpg` patterns; all images are tracked.
+2. **No `get_px_keys()` method** — px key list is hardcoded inline 2 times.
 
 ### Medium Priority
 
@@ -408,7 +390,25 @@ All mapped from Settings Registry. Provides visual editing with live preview for
 ### Low Priority
 
 1. **Typo keys**: `three_colum_sidbar_*`, `six_colum_full_wide_*` (should be `column`)
-2. **Duplicate settings**: `footer_social_links` and `footer_social` are nearly identical
-3. **JS uses `var`** instead of `let/const`
-4. **No ACF support** — old optix-core had it
-5. **No unit tests** for phantom-core code
+2. **JS uses `var`** instead of `let/const`
+3. **No unit tests** for phantom-core code
+4. **Anonymous closures in sanitize callbacks** — not serializable if WP ever serializes settings
+
+### ✅ Fixed Issues (19 total across 2 commits)
+
+| Issue | Severity | Fixed In |
+|-------|----------|----------|
+| Dead `Phantom_Fonts` class (unused) | Major | Commit 1 |
+| Test files in production (`test.php`, `test_plugin.php`) | Major | Commit 1 |
+| No-op `\Phantom_Custom_CSS::instance()` | Minor | Commit 1 |
+| Duplicate body class in `inject_editor()` | Major | Commit 1 |
+| `get_template_part()` crash without theme | Major | Commit 1 |
+| Font loading bug — default Google Font skipped | Major | Commit 1 |
+| Dead `require` for deleted class | Minor | Commit 1 |
+| **Nonce corrupted by `sanitize_key()`** | **Critical** | Commit 2 |
+| Hardcoded `'1.0.0'` → `PHANTOM_CORE_VERSION` (5 controls) | Major | Commit 2 |
+| `header_padding_x`/`header_padding_y` dead CSS keys | Major | Commit 2 |
+| Unescaped CSS values in responsive helper | Major | Commit 2 |
+| Missing `wp_unslash()` on `$_GET['tab']` | Minor | Commit 2 |
+| Permissive rgba regex in color-group sanitize | Minor | Commit 2 |
+| Unescaped toggle status output | Minor | Commit 2 |

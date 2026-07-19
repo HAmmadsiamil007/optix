@@ -24,7 +24,7 @@ PHP Backend (WordPress)
 
 Frontend (Static HTML → SPA via Swup)
   │
-  ├─ frontend/*.html — 27 page templates
+  ├─ frontend/*.html — 21 page templates
   ├─ frontend/assets/css/ — CSS files
   ├─ frontend/assets/js/phantom-data.js — Core data bridge
   └─ frontend/assets/js/vendor/ — Swup, Bootstrap, etc.
