@@ -67,6 +67,11 @@ class Phantom_Custom_CSS {
 
 	public static function flush_cache(): void {
 		delete_transient( self::CACHE_KEY );
+		$upload_dir = wp_upload_dir();
+		$file_path  = $upload_dir['basedir'] . '/phantom-cache/dynamic.css';
+		if ( file_exists( $file_path ) ) {
+			@unlink( $file_path );
+		}
 	}
 
 	public function render_style(): string {
@@ -97,22 +102,22 @@ class Phantom_Custom_CSS {
 			$mobile  = $value['mobile'] ?? '';
 
 			if ( '' !== $desktop ) {
-				$output .= "\t" . $selector . ' { ' . $property . ': ' . $desktop . $unit . '; }' . "\n";
+				$output .= "\t" . $selector . ' { ' . $property . ': ' . esc_attr( $desktop ) . $unit . '; }' . "\n";
 			}
 			if ( '' !== $tablet ) {
 				$output .= '@media (max-width: ' . $breakpoints['tablet'] . 'px) {' . "\n";
-				$output .= "\t" . $selector . ' { ' . $property . ': ' . $tablet . $unit . '; }' . "\n";
+				$output .= "\t" . $selector . ' { ' . $property . ': ' . esc_attr( $tablet ) . $unit . '; }' . "\n";
 				$output .= '}' . "\n";
 			}
 			if ( '' !== $mobile ) {
 				$output .= '@media (max-width: ' . $breakpoints['mobile'] . 'px) {' . "\n";
-				$output .= "\t" . $selector . ' { ' . $property . ': ' . $mobile . $unit . '; }' . "\n";
+				$output .= "\t" . $selector . ' { ' . $property . ': ' . esc_attr( $mobile ) . $unit . '; }' . "\n";
 				$output .= '}' . "\n";
 			}
 		} else {
 			$scalar = $value;
 			if ( '' !== $scalar ) {
-				$output .= "\t" . $selector . ' { ' . $property . ': ' . $scalar . $unit . '; }' . "\n";
+				$output .= "\t" . $selector . ' { ' . $property . ': ' . esc_attr( $scalar ) . $unit . '; }' . "\n";
 			}
 		}
 
@@ -137,7 +142,7 @@ class Phantom_Custom_CSS {
 			$rules = '';
 			foreach ( $properties as $property => $value ) {
 				if ( '' !== $value ) {
-					$rules .= "\t" . $property . ': ' . $value . ";\n";
+					$rules .= "\t" . $property . ': ' . esc_attr( $value ) . ";\n";
 				}
 			}
 			if ( '' !== $rules ) {

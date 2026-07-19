@@ -12,20 +12,12 @@ add_filter(
 	function ( string $css ): string {
 		$keys = array(
 			'container_width', 'content_width', 'sidebar_width',
-			'container_padding_x', 'container_padding_y',
 			'section_padding_x', 'section_padding_y',
-			'content_padding_x', 'content_padding_y',
-			'body_min_width', 'body_max_width',
-			'gap', 'column_gap', 'row_gap',
 		);
 
 		$px_keys = array(
 			'container_width', 'content_width', 'sidebar_width',
-			'container_padding_x', 'container_padding_y',
 			'section_padding_x', 'section_padding_y',
-			'content_padding_x', 'content_padding_y',
-			'body_min_width', 'body_max_width',
-			'gap', 'column_gap', 'row_gap',
 		);
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();

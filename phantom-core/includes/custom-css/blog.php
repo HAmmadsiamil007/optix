@@ -2,6 +2,7 @@
 /**
  * Blog CSS Module
  *
+ * @deprecated 2.0.0 No CSS keys defined. This module is a no-op.
  * @package Phantom_Core
  */
 
@@ -11,11 +12,9 @@ add_filter(
 	'phantom_dynamic_css',
 	function ( string $css ): string {
 		$keys = array(
-			'article_bg', 'article_text_color', 'article_padding',
-			'widget_bg', 'widget_text_color', 'widget_padding',
 		);
 
-		$px_keys = array( 'article_padding', 'widget_padding' );
+		$px_keys = array();
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();
 		$output = '';

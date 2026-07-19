@@ -53,15 +53,14 @@ Phantom Core Plugin
 
 ## Known Issues
 1. Tests directory is empty — no PHPUnit suite yet
-2. Docker COPY commands reference legacy optix-core/optix-main (update needed)
-3. MySQL auth requires db_data volume reset on password change
-4. REST API loopback fails in Docker (expected — no loopback interface)
+2. MySQL auth requires db_data volume reset on password change
+3. REST API loopback fails in Docker (expected — no loopback interface)
 
 ## Development Workflow
 ```bash
 # Push local changes to Docker
-docker cp phantom-core optix_wordpress:/var/www/html/wp-content/plugins/phantom-core
+docker cp phantom-core phantom_wordpress:/var/www/html/wp-content/plugins/phantom-core
 
 # Pull from Docker
-docker cp optix_wordpress:/var/www/html/wp-content/plugins/phantom-core ./phantom-core
+docker cp phantom_wordpress:/var/www/html/wp-content/plugins/phantom-core ./phantom-core
 ```

@@ -11,10 +11,10 @@ add_filter(
 	'phantom_dynamic_css',
 	function ( string $css ): string {
 		$keys = array(
-			'footer_bg', 'footer_text_color', 'footer_padding', 'footer_fullwidth',
+			'footer_bg_color', 'footer_text',
 		);
 
-		$px_keys = array( 'footer_padding' );
+		$px_keys = array();
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();
 		$output = '';

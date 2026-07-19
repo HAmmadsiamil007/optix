@@ -1107,7 +1107,7 @@ For each responsive slider, add appropriate `input_attrs`:
 
 - [ ] **3.11a: PHP syntax check**
 
-Run: `docker exec optix_wordpress php -l /var/www/html/wp-content/plugins/phantom-core/includes/custom-controls/class-{name}-control.php` for all 8 + base
+Run: `docker exec phantom_wordpress php -l /var/www/html/wp-content/plugins/phantom-core/includes/custom-controls/class-{name}-control.php` for all 8 + base
 
 - [ ] **3.11b: JS parse check**
 

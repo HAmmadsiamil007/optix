@@ -71,28 +71,19 @@
       }
 
       var self = this;
-      var nonce = (window.PhantomData && window.PhantomData.nonce) || (document.querySelector('meta[name="wp-rest-nonce"]') || {}).content || '';
-      var self2 = this;
+      var nonce = this._data.api_nonce || '';
       return fetch(this._baseUrl + '/settings/' + encodeURIComponent(key), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        headers: { 'Content-Type': 'application/json', 'X-Phantom-Nonce': nonce },
         body: JSON.stringify({ value: value }),
         credentials: 'same-origin'
-      }).then(function (r) {
-        if (r.status === 401) {
-          var freshNonce = (document.querySelector('meta[name="wp-rest-nonce"]') || {}).content || '';
-          return fetch(self2._baseUrl + '/settings/' + encodeURIComponent(key), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': freshNonce },
-            body: JSON.stringify({ value: value }),
-            credentials: 'same-origin'
-          });
-        }
-        return r;
       }).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         self._emit(key, value);
         return r.json();
+      }).catch(function (err) {
+        console.error('[PhantomBridge] setSetting error:', err);
+        throw err;
       });
     },
 
@@ -146,10 +137,10 @@
         if (!changes.hasOwnProperty(key)) continue;
         self._data[key] = changes[key];
       }
-      var nonce = (window.PhantomData && window.PhantomData.nonce) || (document.querySelector('meta[name="wp-rest-nonce"]') || {}).content || '';
+      var nonce = this._data.api_nonce || '';
       return fetch(this._baseUrl + '/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+        headers: { 'Content-Type': 'application/json', 'X-Phantom-Nonce': nonce },
         body: JSON.stringify({ settings: changes }),
         credentials: 'same-origin'
       }).then(function (r) {
@@ -158,6 +149,9 @@
       }).then(function (data) {
         Object.keys(changes).forEach(function (k) { self._emit(k, changes[k]); });
         return data;
+      }).catch(function (err) {
+        console.error('[PhantomBridge] saveChanges error:', err);
+        throw err;
       });
     },
 
@@ -174,15 +168,14 @@
     },
 
     _getNonce: function () {
-      var meta = document.querySelector('meta[name="wp-rest-nonce"]');
-      return meta ? meta.getAttribute('content') : '';
+      return this._data.api_nonce || '';
     },
 
     _saveSetting: function (key, value) {
       var url = this._baseUrl + '/settings/' + encodeURIComponent(key);
       var nonce = this._getNonce();
       var headers = { 'Content-Type': 'application/json' };
-      if (nonce) headers['X-WP-Nonce'] = nonce;
+      if (nonce) headers['X-Phantom-Nonce'] = nonce;
       return fetch(url, {
         method: 'PUT',
         credentials: 'same-origin',
@@ -207,6 +200,7 @@
 
     _onEditableBlur: function (e) {
       var el = e.currentTarget;
+      if (el._phantomCleanup) { el._phantomCleanup(); delete el._phantomCleanup; }
       var key = el.getAttribute('data-phantom-key');
       if (!key) return;
       var val = el.tagName === 'A' ? el.getAttribute('href') : el.innerHTML.replace(/<br\s*\/?>/g, '\n');
@@ -233,8 +227,13 @@
       el.classList.add('phantom-editing');
       el.focus();
       var self = this;
-      el.addEventListener('blur', function (e) { self._onEditableBlur(e); }, { once: true });
-      el.addEventListener('keydown', function (e) { self._onEditableKeydown(e); });
+      var onBlur = function (e) { self._onEditableBlur(e); };
+      var onKeydown = function (e) { self._onEditableKeydown(e); };
+      el.addEventListener('blur', onBlur, { once: true });
+      el.addEventListener('keydown', onKeydown);
+      el._phantomCleanup = function () {
+        el.removeEventListener('keydown', onKeydown);
+      };
     },
 
     _onElementClick: function (e) {

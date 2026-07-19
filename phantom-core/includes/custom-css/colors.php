@@ -11,18 +11,14 @@ add_filter(
 	'phantom_dynamic_css',
 	function ( string $css ): string {
 		$keys = array(
-			'primary_color', 'secondary_color', 'accent_color',
-			'background_color', 'text_color', 'heading_color',
-			'link_color', 'link_hover_color', 'border_color',
+			'color_primary', 'color_secondary', 'color_accent',
+			'color_background', 'color_text', 'color_heading',
+			'color_link', 'color_link_hover', 'color_border',
 			'header_bg', 'header_text_color',
-			'footer_bg', 'footer_text_color',
-			'topbar_bg', 'topbar_text_color',
-			'button_bg', 'button_text_color', 'button_hover_bg', 'button_hover_text_color',
-			'input_bg', 'input_text_color', 'input_border_color', 'input_focus_border_color',
-			'article_bg', 'article_text_color', 'widget_bg',
-			'woo_primary', 'woo_secondary', 'woo_button_bg', 'woo_button_text_color',
-			'woo_rating_color', 'woo_sale_badge_bg', 'woo_sale_badge_text',
-			'submenu_bg', 'submenu_text_color',
+			'footer_bg_color', 'footer_text',
+			'topbar_bg', 'topbar_text',
+			'button_bg', 'button_text', 'button_bg_hover', 'button_text_hover',
+			'color_rating', 'color_sale',
 		);
 
 		$map = \PhantomCore\Settings_Registry::get_css_var_map();

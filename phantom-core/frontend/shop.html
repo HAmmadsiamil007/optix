@@ -305,10 +305,13 @@
                                     <span>Showing 1–18 of 24 results</span>
                                 </div>
                                 <div id="toolbar">
-                                    <select class="form-control">
-                                        <option value="">Default Sorting</option>
-                                        <option value="all">DermaGlow</option>
-                                        <option value="selected">ImmunoBoost</option>
+                                    <select class="form-control phantom-sort-select">
+                                        <option value="menu_order">Default Sorting</option>
+                                        <option value="popularity">Sort by Popularity</option>
+                                        <option value="rating">Sort by Rating</option>
+                                        <option value="date">Sort by Latest</option>
+                                        <option value="price">Price: Low to High</option>
+                                        <option value="price-desc">Price: High to Low</option>
                                     </select>
                                 </div>
                             </div>
@@ -316,13 +319,10 @@
                     </div>
                     <div class="shop-box-wrapper">
                         <div class="row shop-products-con" data-phantom-products="12"></div>
-                        <ul class="pagination">
-                            <li class="page-item"><a class="page-link" href="/one-column/">1</a></li>
-                            <li class="page-item"><a class="page-link" href="/two-column/">2</a></li>
-                            <li class="page-item"><a class="page-link" href="/three-column/">3</a></li>
-                            <li class="page-item next">
-                                <a class="page-link" href="/post/"><i class="fas fa-angle-right"></i></a>
-                            </li>
+                        <ul class="pagination phantom-pagination justify-content-center">
+                            <li class="page-item phantom-page-prev"><a class="page-link" href="#" data-page="prev"><i class="fas fa-angle-left"></i></a></li>
+                            <li class="page-item active phantom-page-num"><a class="page-link" href="#" data-page="1">1</a></li>
+                            <li class="page-item phantom-page-next"><a class="page-link" href="#" data-page="next"><i class="fas fa-angle-right"></i></a></li>
                         </ul>
                     </div>
                 </div>
@@ -459,8 +459,7 @@
     <script src="assets/js/counter.js"></script>
     <script src="assets/js/search.js"></script>
     <script src="assets/js/country_dropdown.js"></script>
-    <script src="assets/js/remove-product.js"></script>
-    <script src="assets/js/quantity.js"></script>
+
     <script src="assets/js/filter-button.js"></script>
 <script src="assets/js/phantom-data.js"></script>
 </body>

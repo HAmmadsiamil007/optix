@@ -11,10 +11,8 @@ add_filter(
 	'phantom_dynamic_css',
 	function ( string $css ): string {
 		$keys = array(
-			'woo_primary', 'woo_secondary',
-			'woo_button_bg', 'woo_button_text_color',
-			'woo_rating_color',
-			'woo_sale_badge_bg', 'woo_sale_badge_text',
+			'color_rating',
+			'color_sale',
 		);
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();

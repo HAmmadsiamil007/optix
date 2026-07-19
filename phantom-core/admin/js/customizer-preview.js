@@ -177,7 +177,14 @@
   wp.customize('phantom_footer_about_text', function (value) {
     value.bind(function (newval) {
       var el = document.querySelector('.logo-content .text.text-size-14');
-      if (el) el.innerHTML = newval.replace(/\n/g, '<br>');
+      if (el) {
+        el.textContent = '';
+        var lines = (newval || '').split('\n');
+        for (var i = 0; i < lines.length; i++) {
+          if (i > 0) el.appendChild(document.createElement('br'));
+          el.appendChild(document.createTextNode(lines[i]));
+        }
+      }
     });
   });
 
@@ -185,7 +192,14 @@
   wp.customize('phantom_footer_address', function (value) {
     value.bind(function (newval) {
       var el = document.querySelector('.icon ul.list-unstyled a.address, .icon ul.list-unstyled li:last-child a');
-      if (el) el.innerHTML = newval.replace(/\n/g, '<br>');
+      if (el) {
+        el.textContent = '';
+        var lines = (newval || '').split('\n');
+        for (var i = 0; i < lines.length; i++) {
+          if (i > 0) el.appendChild(document.createElement('br'));
+          el.appendChild(document.createTextNode(lines[i]));
+        }
+      }
     });
   });
 
@@ -193,7 +207,15 @@
   wp.customize('phantom_footer_copyright', function (value) {
     value.bind(function (newval) {
       var el = document.querySelector('.copyright .content p');
-      if (el) el.innerHTML = newval.replace('%d', new Date().getFullYear()).replace(/\n/g, '<br>');
+      if (el) {
+        el.textContent = '';
+        var text = (newval || '').replace('%d', new Date().getFullYear());
+        var lines = text.split('\n');
+        for (var i = 0; i < lines.length; i++) {
+          if (i > 0) el.appendChild(document.createElement('br'));
+          el.appendChild(document.createTextNode(lines[i]));
+        }
+      }
     });
   });
 

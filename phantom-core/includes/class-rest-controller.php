@@ -37,7 +37,7 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'update_settings' ),
-					'permission_callback' => array( $this, 'settings_permission_check' ),
+					'permission_callback' => array( $this, 'settings_write_permission_check' ),
 					'args'                => $this->get_bulk_update_args(),
 				),
 			)
@@ -56,13 +56,13 @@ class Rest_Controller extends \WP_REST_Controller {
 				array(
 					'methods'             => \WP_REST_Server::EDITABLE,
 					'callback'            => array( $this, 'update_setting' ),
-					'permission_callback' => array( $this, 'settings_permission_check' ),
+					'permission_callback' => array( $this, 'settings_write_permission_check' ),
 					'args'                => $this->get_single_update_args(),
 				),
 				array(
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'delete_setting' ),
-					'permission_callback' => array( $this, 'settings_permission_check' ),
+					'permission_callback' => array( $this, 'settings_write_permission_check' ),
 					'args'                => $this->get_single_args(),
 				),
 			)
@@ -292,7 +292,134 @@ class Rest_Controller extends \WP_REST_Controller {
 			)
 		);
 
+		register_rest_route(
+			$this->namespace,
+			'/cart/add',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'add_to_cart_endpoint' ),
+					'permission_callback' => array( $this, 'cart_write_permission_check' ),
+					'args'                => array(
+						'product_id'   => array(
+							'required'          => true,
+							'type'              => 'integer',
+							'sanitize_callback' => 'absint',
+						),
+						'quantity'     => array(
+							'required'          => false,
+							'type'              => 'integer',
+							'default'           => 1,
+							'sanitize_callback' => 'absint',
+						),
+						'variation_id' => array(
+							'required'          => false,
+							'type'              => 'integer',
+							'default'           => 0,
+							'sanitize_callback' => 'absint',
+						),
+						'variation'    => array(
+							'required'          => false,
+							'type'              => 'object',
+							'default'           => array(),
+						),
+					),
+				),
+			)
+		);
 
+		register_rest_route(
+			$this->namespace,
+			'/cart/update',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'update_cart_item_endpoint' ),
+					'permission_callback' => array( $this, 'cart_write_permission_check' ),
+					'args'                => array(
+						'key'      => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'quantity' => array(
+							'required'          => true,
+							'type'              => 'integer',
+							'sanitize_callback' => 'absint',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/cart/remove',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'remove_cart_item_endpoint' ),
+					'permission_callback' => array( $this, 'cart_write_permission_check' ),
+					'args'                => array(
+						'key' => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/cart/coupon',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'apply_coupon_endpoint' ),
+					'permission_callback' => array( $this, 'cart_write_permission_check' ),
+					'args'                => array(
+						'code' => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/cart/remove-coupon',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'remove_coupon_endpoint' ),
+					'permission_callback' => array( $this, 'cart_write_permission_check' ),
+					'args'                => array(
+						'code' => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/cart/shipping-methods',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'get_shipping_methods' ),
+					'permission_callback' => array( $this, 'cart_write_permission_check' ),
+				),
+			)
+		);
 
 		register_rest_route(
 			$this->namespace,
@@ -343,18 +470,128 @@ class Rest_Controller extends \WP_REST_Controller {
 				),
 			)
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/auth/login',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'auth_login' ),
+				'permission_callback' => '__return_true',
+				'args'                => $this->get_auth_login_args(),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/auth/register',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'auth_register' ),
+				'permission_callback' => '__return_true',
+				'args'                => $this->get_auth_register_args(),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/auth/password-reset',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'auth_password_reset' ),
+				'permission_callback' => '__return_true',
+				'args'                => $this->get_auth_password_reset_args(),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/auth/logout',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'auth_logout' ),
+				'permission_callback' => array( $this, 'verify_nonce' ),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/user/orders',
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_user_orders' ),
+				'permission_callback' => array( $this, 'verify_nonce' ),
+				'args'                => array(
+					'limit' => array(
+						'required'          => false,
+						'type'              => 'integer',
+						'default'           => 10,
+						'sanitize_callback' => 'absint',
+					),
+					'status' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'default'           => 'any',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
 	}
 
 	public function settings_permission_check(): bool {
 		return current_user_can( 'edit_theme_options' );
 	}
 
-	public function admin_permission_check(): bool {
+	public function admin_permission_check(): bool|\WP_Error {
+		$nonce = $this->verify_nonce();
+		if ( is_wp_error( $nonce ) ) {
+			return $nonce;
+		}
 		return current_user_can( 'manage_options' );
 	}
 
 	public function partial_permission_check(): bool {
 		return current_user_can( 'edit_theme_options' );
+	}
+
+	private function verify_nonce(): bool|\WP_Error {
+		if ( ! function_exists( 'wp_verify_nonce' ) ) {
+			return true;
+		}
+		$nonce = '';
+		if ( function_exists( 'rest_get_server' ) ) {
+			$server = rest_get_server();
+			if ( $server ) {
+				$request = $server->get_request();
+				if ( $request ) {
+					$nonce = $request->get_header( 'X-Phantom-Nonce' ) ?? '';
+				}
+			}
+		}
+		if ( '' === $nonce ) {
+			$nonce = isset( $_SERVER['HTTP_X_PHANTOM_NONCE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_PHANTOM_NONCE'] ) ) : '';
+		}
+		if ( '' === $nonce || ! wp_verify_nonce( $nonce, 'phantom_api' ) ) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__( 'Invalid or missing nonce.', 'phantom-core' ),
+				array( 'status' => 401 )
+			);
+		}
+		return true;
+	}
+
+	public function settings_write_permission_check(): bool|\WP_Error {
+		$nonce = $this->verify_nonce();
+		if ( is_wp_error( $nonce ) ) {
+			return $nonce;
+		}
+		return current_user_can( 'edit_theme_options' );
+	}
+
+	public function cart_write_permission_check(): bool|\WP_Error {
+		return $this->verify_nonce();
 	}
 
 	public function get_partial( \WP_REST_Request $request ): \WP_REST_Response {
@@ -1241,43 +1478,135 @@ class Rest_Controller extends \WP_REST_Controller {
 		return new \WP_REST_Response( $data, 200 );
 	}
 
+	public function add_to_cart_endpoint( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
+		}
+		try {
+			$product_id    = $request->get_param( 'product_id' );
+			$quantity      = $request->get_param( 'quantity' );
+			$variation_id  = $request->get_param( 'variation_id' );
+			$variation     = $request->get_param( 'variation' );
+			$cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, (array) $variation );
+			if ( false === $cart_item_key ) {
+				return $this->wp_error( 'add_to_cart_failed', __( 'Could not add item to cart.', 'phantom-core' ), 400 );
+			}
+			return new \WP_REST_Response( $this->get_cart_data(), 200 );
+		} catch ( \Throwable $e ) {
+			return $this->wp_error( 'server_error', __( 'Internal server error.', 'phantom-core' ), 500 );
+		}
+	}
+
+	public function update_cart_item_endpoint( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
+		}
+		try {
+			$key      = $request->get_param( 'key' );
+			$quantity = $request->get_param( 'quantity' );
+			if ( null === WC()->cart->get_cart_item( $key ) ) {
+				return $this->wp_error( 'invalid_key', __( 'Cart item not found.', 'phantom-core' ), 400 );
+			}
+			WC()->cart->set_quantity( $key, $quantity );
+			return new \WP_REST_Response( $this->get_cart_data(), 200 );
+		} catch ( \Throwable $e ) {
+			return $this->wp_error( 'server_error', __( 'Internal server error.', 'phantom-core' ), 500 );
+		}
+	}
+
+	public function remove_cart_item_endpoint( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
+		}
+		try {
+			$key = $request->get_param( 'key' );
+			if ( null === WC()->cart->get_cart_item( $key ) ) {
+				return $this->wp_error( 'invalid_key', __( 'Cart item not found.', 'phantom-core' ), 400 );
+			}
+			WC()->cart->remove_cart_item( $key );
+			return new \WP_REST_Response( $this->get_cart_data(), 200 );
+		} catch ( \Throwable $e ) {
+			return $this->wp_error( 'server_error', __( 'Internal server error.', 'phantom-core' ), 500 );
+		}
+	}
+
+	public function apply_coupon_endpoint( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
+		}
+		try {
+			$code   = $request->get_param( 'code' );
+			$result = WC()->cart->apply_coupon( $code );
+			if ( is_wp_error( $result ) ) {
+				return $this->wp_error( 'coupon_error', $result->get_error_message(), 400 );
+			}
+			return new \WP_REST_Response( $this->get_cart_data(), 200 );
+		} catch ( \Throwable $e ) {
+			return $this->wp_error( 'server_error', __( 'Internal server error.', 'phantom-core' ), 500 );
+		}
+	}
+
+	public function remove_coupon_endpoint( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
+		}
+		try {
+			$code = $request->get_param( 'code' );
+			WC()->cart->remove_coupon( $code );
+			return new \WP_REST_Response( $this->get_cart_data(), 200 );
+		} catch ( \Throwable $e ) {
+			return $this->wp_error( 'server_error', __( 'Internal server error.', 'phantom-core' ), 500 );
+		}
+	}
+
+	public function get_shipping_methods(): \WP_REST_Response {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
+		}
+		try {
+			WC()->cart->calculate_shipping();
+			$packages = WC()->shipping()->calculate_shipping( WC()->cart->get_shipping_packages() );
+			$methods  = array();
+			$selected = '';
+			foreach ( $packages as $package ) {
+				if ( empty( $package['rates'] ) ) {
+					continue;
+				}
+				foreach ( $package['rates'] as $rate ) {
+					$methods[] = array(
+						'id'    => $rate->get_id(),
+						'label' => $rate->get_label(),
+						'cost'  => $rate->get_cost(),
+						'tax'   => $rate->get_shipping_tax(),
+					);
+				}
+				$chosen = WC()->session->get( 'chosen_shipping_methods', array() );
+				if ( isset( $chosen[ $package['index'] ] ) ) {
+					$selected = $chosen[ $package['index'] ];
+				} elseif ( ! empty( $package['rates'] ) ) {
+					$rate_ids = array_keys( $package['rates'] );
+					$selected = $rate_ids[0];
+				}
+			}
+			return new \WP_REST_Response(
+				array(
+					'success'  => true,
+					'methods'  => $methods,
+					'selected' => $selected,
+				),
+				200
+			);
+		} catch ( \Throwable $e ) {
+			return $this->wp_error( 'server_error', __( 'Could not retrieve shipping methods.', 'phantom-core' ), 500 );
+		}
+	}
+
 	public function get_cart(): \WP_REST_Response {
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			return $this->wp_error( 'woocommerce_inactive', __( 'WooCommerce is not active.', 'phantom-core' ), 400 );
 		}
-
 		try {
-			$cart     = WC()->cart;
-			if ( null === $cart ) {
-				return new \WP_REST_Response( array( 'items' => array(), 'total' => wc_price( 0 ), 'totalItems' => 0, 'currency' => get_woocommerce_currency_symbol() ), 200 );
-			}
-			$items    = array();
-			$currency = get_woocommerce_currency_symbol();
-
-			foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
-				$product  = $cart_item['data'];
-				$items[]  = array(
-					'key'     => $cart_item_key,
-					'id'      => $product->get_id(),
-					'name'    => $product->get_name(),
-					'price'   => wc_price( $product->get_price() ),
-					'qty'     => $cart_item['quantity'],
-					'subtotal'=> wc_price( $cart_item['line_subtotal'] ),
-					'total'   => wc_price( $cart_item['line_total'] ),
-					'image'   => wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) ?: '',
-					'url'     => $product->get_permalink(),
-				);
-			}
-
-			return new \WP_REST_Response(
-				array(
-					'items'      => $items,
-					'total'      => wc_price( $cart->get_total() ),
-					'totalItems' => $cart->get_cart_contents_count(),
-					'currency'   => $currency,
-				),
-				200
-			);
+			return new \WP_REST_Response( $this->get_cart_data(), 200 );
 		} catch ( \Throwable $e ) {
 			return new \WP_REST_Response( array( 'items' => array(), 'total' => '', 'totalItems' => 0, 'currency' => '' ), 200 );
 		}
@@ -1439,10 +1768,12 @@ class Rest_Controller extends \WP_REST_Controller {
 			);
 		}
 		return array(
-			'items'      => $items,
-			'total'      => wc_price( $cart->get_total() ),
-			'totalItems' => $cart->get_cart_contents_count(),
-			'currency'   => $currency,
+			'items'          => $items,
+			'subtotal'       => wc_price( $cart->get_subtotal() ),
+			'total'          => wc_price( $cart->get_total() ),
+			'shipping_total' => wc_price( (float) $cart->get_shipping_total() + (float) $cart->get_shipping_tax() ),
+			'totalItems'     => $cart->get_cart_contents_count(),
+			'currency'       => $currency,
 		);
 	}
 
@@ -2285,6 +2616,217 @@ class Rest_Controller extends \WP_REST_Controller {
 				'minimum'           => 1,
 				'default'           => 1,
 				'sanitize_callback' => 'absint',
+			),
+		);
+	}
+
+	public function auth_login( \WP_REST_Request $request ): \WP_REST_Response {
+		$email    = sanitize_email( $request->get_param( 'email' ) );
+		$password = $request->get_param( 'password' );
+
+		if ( empty( $email ) || empty( $password ) ) {
+			return $this->wp_error( 'missing_fields', __( 'Email and password are required.', 'phantom-core' ), 400 );
+		}
+
+		$user = wp_authenticate( $email, $password );
+		if ( is_wp_error( $user ) ) {
+			return $this->wp_error( 'auth_failed', __( 'Invalid email or password.', 'phantom-core' ), 401 );
+		}
+
+		wp_set_current_user( $user->ID );
+		wp_set_auth_cookie( $user->ID );
+
+		return new \WP_REST_Response(
+			array(
+				'success'     => true,
+				'user_id'     => $user->ID,
+				'user_name'   => $user->display_name,
+				'user_email'  => $user->user_email,
+				'api_nonce'   => wp_create_nonce( 'phantom_api' ),
+			),
+			200
+		);
+	}
+
+	public function auth_register( \WP_REST_Request $request ): \WP_REST_Response {
+		$name     = sanitize_text_field( $request->get_param( 'name' ) );
+		$email    = sanitize_email( $request->get_param( 'email' ) );
+		$password = $request->get_param( 'password' );
+
+		if ( empty( $name ) || empty( $email ) || empty( $password ) ) {
+			return $this->wp_error( 'missing_fields', __( 'Name, email, and password are required.', 'phantom-core' ), 400 );
+		}
+
+		if ( ! is_email( $email ) ) {
+			return $this->wp_error( 'invalid_email', __( 'Please provide a valid email address.', 'phantom-core' ), 400 );
+		}
+
+		if ( email_exists( $email ) ) {
+			return $this->wp_error( 'email_exists', __( 'An account with this email already exists.', 'phantom-core' ), 409 );
+		}
+
+		if ( strlen( $password ) < 6 ) {
+			return $this->wp_error( 'weak_password', __( 'Password must be at least 6 characters.', 'phantom-core' ), 400 );
+		}
+
+		$user_id = wp_insert_user(
+			array(
+				'user_login' => $email,
+				'user_email' => $email,
+				'display_name' => $name,
+				'user_pass'  => $password,
+			)
+		);
+
+		if ( is_wp_error( $user_id ) ) {
+			return $this->wp_error( 'registration_failed', __( 'Could not create account. Please try again.', 'phantom-core' ), 500 );
+		}
+
+		wp_set_current_user( $user_id );
+		wp_set_auth_cookie( $user_id );
+
+		return new \WP_REST_Response(
+			array(
+				'success'     => true,
+				'user_id'     => $user_id,
+				'user_name'   => $name,
+				'user_email'  => $email,
+				'api_nonce'   => wp_create_nonce( 'phantom_api' ),
+			),
+			201
+		);
+	}
+
+	public function auth_password_reset( \WP_REST_Request $request ): \WP_REST_Response {
+		$email = sanitize_email( $request->get_param( 'email' ) );
+
+		if ( empty( $email ) || ! is_email( $email ) ) {
+			return $this->wp_error( 'invalid_email', __( 'Please provide a valid email address.', 'phantom-core' ), 400 );
+		}
+
+		$user = get_user_by( 'email', $email );
+		if ( ! $user ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => true,
+					'message' => __( 'If an account exists, a password reset link has been sent.', 'phantom-core' ),
+				),
+				200
+			);
+		}
+
+		$key = get_password_reset_key( $user );
+		if ( is_wp_error( $key ) ) {
+			return $this->wp_error( 'reset_key_failed', __( 'Could not generate reset key.', 'phantom-core' ), 500 );
+		}
+
+		$reset_url = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user->user_login ) );
+		$subject   = __( 'Password Reset Request', 'phantom-core' );
+		$message   = sprintf( __( 'Click the following link to reset your password: %s', 'phantom-core' ), $reset_url );
+		wp_mail( $email, $subject, $message );
+
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => __( 'If an account exists, a password reset link has been sent.', 'phantom-core' ),
+			),
+			200
+		);
+	}
+
+	public function auth_logout(): \WP_REST_Response {
+		wp_logout();
+		return new \WP_REST_Response(
+			array(
+				'success'   => true,
+				'message'   => __( 'Logged out successfully.', 'phantom-core' ),
+				'api_nonce' => wp_create_nonce( 'phantom_api' ),
+			),
+			200
+		);
+	}
+
+	public function get_user_orders( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_REST_Response( array( 'success' => false, 'message' => __( 'Not authenticated.', 'phantom-core' ) ), 401 );
+		}
+		$orders = array();
+		if ( class_exists( 'WooCommerce' ) ) {
+			$user_id = get_current_user_id();
+			$limit   = $request->get_param( 'limit' );
+			$status  = $request->get_param( 'status' );
+			$args    = array(
+				'customer' => $user_id,
+				'limit'    => $limit,
+				'return'   => 'objects',
+			);
+			if ( 'any' !== $status ) {
+				$args['status'] = $status;
+			}
+			$wc_orders = wc_get_orders( $args );
+			foreach ( $wc_orders as $order ) {
+				$orders[] = array(
+					'id'        => $order->get_id(),
+					'number'    => $order->get_order_number(),
+					'date'      => $order->get_date_created() ? $order->get_date_created()->date_i18n( 'F j, Y' ) : '',
+					'status'    => wc_get_order_status_name( $order->get_status() ),
+					'total'     => $order->get_formatted_order_total(),
+					'items'     => count( $order->get_items() ),
+					'payment'   => $order->get_payment_method_title(),
+				);
+			}
+		}
+		return new \WP_REST_Response(
+			array( 'success' => true, 'orders' => $orders ),
+			200
+		);
+	}
+
+	private function get_auth_login_args(): array {
+		return array(
+			'email' => array(
+				'description'       => __( 'User email address.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => true,
+				'sanitize_callback' => 'sanitize_email',
+			),
+			'password' => array(
+				'description'       => __( 'User password.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => true,
+			),
+		);
+	}
+
+	private function get_auth_register_args(): array {
+		return array(
+			'name' => array(
+				'description'       => __( 'Display name.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => true,
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'email' => array(
+				'description'       => __( 'User email address.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => true,
+				'sanitize_callback' => 'sanitize_email',
+			),
+			'password' => array(
+				'description'       => __( 'Password (min 6 characters).', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => true,
+			),
+		);
+	}
+
+	private function get_auth_password_reset_args(): array {
+		return array(
+			'email' => array(
+				'description'       => __( 'User email address.', 'phantom-core' ),
+				'type'              => 'string',
+				'required'          => true,
+				'sanitize_callback' => 'sanitize_email',
 			),
 		);
 	}

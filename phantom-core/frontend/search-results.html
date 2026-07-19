@@ -2,8 +2,7 @@
 <html lang="zxx">
 
 <head>
-    <title> Login | Claudia </title>
-    <!-- /SEO Ultimate -->
+    <title> Search Results | Claudia </title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
     <link rel="apple-touch-icon" sizes="57x57" href="assets/images/favicon/apple-icon-57x57.png">
@@ -19,73 +18,76 @@
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="96x96" href="assets/images/favicon/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon/favicon-16x16.png">
-
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="assets/images/favicon/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
-    <!-- Latest compiled and minified CSS -->
     <link href="assets/bootstrap/bootstrap.min.css" rel="stylesheet">
-        <!-- Font Awesome link -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- StyleSheet link CSS -->
     <link href="assets/css/style.css" rel="stylesheet" type="text/css">
     <link href="assets/css/responsive.css" rel="stylesheet" type="text/css">
     <link href="assets/css/owl.carousel.min.css" rel="stylesheet" type="text/css">
     <link href="assets/css/owl.theme.default.min.css" rel="stylesheet" type="text/css">
-    <!-- StyleSheet link CSS -->
     <link rel="stylesheet" href="assets/css/animate.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/magnific-popup.css">
 </head>
 
 <body>
-    <!-- LOGIN FORM SECTION -->
-    <section class="login-form d-flex align-items-center">
-        <div class="container">
-            <div class="login-form-title text-center">
-                <a href="/" class="d-inline-block">
-                    <figure class="login-page-logo">
-                        <img src="assets/images/large-logo.png" alt="image">
-                    </figure>
-                </a>
-                <h2>Welcome Back !</h2>
-            </div>
-            <div class="login-form-box">
-                <div class="login-card">
-                    <form class="" action="/login/" method="POST">
-                        <div class="form-group">
-                            <label for="exampleInputEmail1">Enter Your E-mail</label>
-                            <input class="input-field form_style" type="email" id="exampleInputEmail1" name="email"
-                                required>
+    <div class="home_banner_outer position-relative float-left w-100">
+        <!-- SUB BANNER SECTION -->
+        <section class="sub-banner-con position-relative float-left w-100 gradient-overlay d-flex align-items-center justify-content-center">
+            <div class="container">
+                <div class="col-xl-12 col-lg-12 mr-auto ml-auto">
+                    <div class="sub-banner-inner-con text-center">
+                        <h1>Search Results</h1>
+                        <div class="breadcrumb-con d-inline-block">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Search</li>
+                            </ol>
                         </div>
-                        <div class="form-group">
-                            <label for="exampleInputPassword1">Enter Your Password</label>
-                            <input class="input-field form_style" type="password" id="exampleInputPassword1"
-                                name="password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary hover-effect">Login</button>
-                        <div>
-                            <label class="font-weight-normal mb-0" style="cursor: pointer;">
-                                <input class="checkbox" type="checkbox" name="userRememberMe" required>
-                                Remember me
-                            </label>
-                            <a href="/password-reset/" class="forgot-password float-right">Lost Password?</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-                <div class="join-now-outer text-center">
-                    <a href="/join-now/">Join now, create your FREE account</a>
+            </div>
+        </section>
+    </div>
+
+    <!-- SEARCH RESULTS SECTION -->
+    <section class="blog-tabs-section padding-top padding-bottom float-left w-100">
+        <div class="container">
+            <div class="search-form-con mb-4">
+                <form role="search" method="get" action="/search/" class="d-flex">
+                    <input type="search" name="q" class="form-control mr-2" placeholder="Search..." aria-label="Search">
+                    <button type="submit" class="primary_btn">Search</button>
+                </form>
+            </div>
+            <div class="search-results-inner">
+                <p>No results found. Try a different search term.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <section class="footer-section padding-top padding-bottom float-left w-100">
+        <div class="container">
+            <div class="row">
+            </div>
+        </div>
+        <div class="copyright">
+            <div class="container">
+                <div class="content">
+                    <p class="mb-0">Copyright &copy; 2025 claudia.com All rights reserved.</p>
+                    <img src="./assets/images/payment-cards.png" alt="image" class="img-fluid">
                 </div>
             </div>
         </div>
     </section>
-    <!-- PRE LOADER -->
+
     <div class="loader-mask">
         <div class="loader">
             <div></div>
             <div></div>
         </div>
     </div>
-    <!-- Latest compiled JavaScript -->
     <script src="assets/js/jquery-3.7.1.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
@@ -98,9 +100,7 @@
     <script src="assets/js/back-to-top-button.js"></script>
     <script src="assets/js/preloader.js"></script>
     <script src="assets/js/counter.js"></script>
-    <script src="assets/js/search.js"></script>
-    <script src="assets/js/country_dropdown.js"></script>
-<script src="assets/js/phantom-data.js"></script>
+    <script src="assets/js/phantom-data.js"></script>
 </body>
 
 </html>

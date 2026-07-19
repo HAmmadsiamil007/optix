@@ -21,7 +21,7 @@ add_filter(
 			'typography_h4_size', 'typography_h4_height',
 			'typography_h5_size', 'typography_h5_height',
 			'typography_h6_size', 'typography_h6_height',
-			'menu_font_size', 'menu_font_weight',
+			'menu_font_size',
 		);
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();

@@ -1,4 +1,11 @@
 <?php
+/**
+ * Responsive CSS Helper
+ *
+ * @deprecated 2.0.0 Function phantom_responsive_css() is no longer called internally.
+ *             Use Phantom_Custom_CSS::responsive_css() for new code.
+ * @package Phantom_Core
+ */
 defined( 'ABSPATH' ) || exit;
 
 if ( ! function_exists( 'phantom_responsive_css' ) ) {

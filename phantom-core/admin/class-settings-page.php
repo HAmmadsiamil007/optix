@@ -360,7 +360,7 @@ class Settings_Page {
 				   class="phantom-core-image-input" />
 			<div class="phantom-core-image-preview">
 				<?php if ( $preview_url ) : ?>
-					<img src="<?php echo esc_url( $preview_url ); ?>" alt="" style="max-width:200px;max-height:150px;" />
+					<img src="<?php echo esc_url( $preview_url ); ?>" alt="<?php echo esc_attr( $entry['label'] ?? __( 'Image preview', 'phantom-core' ) ); ?>" style="max-width:200px;max-height:150px;" />
 				<?php endif; ?>
 			</div>
 			<div class="phantom-core-image-actions">
@@ -621,7 +621,7 @@ class Settings_Page {
 				} elseif ( 'esc_url_raw' === $sanitize ) {
 					$new_value = esc_url_raw( (string) $raw_value );
 				} elseif ( 'sanitize_hex_color' === $sanitize ) {
-					$new_value = sanitize_hex_color( (string) $raw_value ) ? sanitize_hex_color( (string) $raw_value ) : ( $entry['default'] ?? '' );
+					$new_value = sanitize_hex_color( (string) $raw_value ) ?: ( $entry['default'] ?? '' );
 				} elseif ( 'absint' === $sanitize ) {
 					$new_value = absint( $raw_value );
 				} elseif ( 'floatval' === $sanitize || 'float' === $type ) {

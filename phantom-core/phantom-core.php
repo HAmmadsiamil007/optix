@@ -83,6 +83,12 @@ if ( file_exists( $settings_page_path ) ) {
 	\PhantomCore\Admin\Settings_Page::get_instance()->init();
 }
 
+$font_download_page_path = PHANTOM_CORE_PATH . 'admin/class-font-download-page.php';
+if ( file_exists( $font_download_page_path ) ) {
+	require_once $font_download_page_path;
+	\Phantom_Font_Download_Page::instance()->init();
+}
+
 $cache_path = PHANTOM_CORE_PATH . 'includes/Engine/Cache.php';
 if ( file_exists( $cache_path ) ) {
 	require_once $cache_path;

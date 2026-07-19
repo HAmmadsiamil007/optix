@@ -35,14 +35,14 @@ profiles/{name}/
 
 1. Active profile directory
 2. Default profile directory (`profiles/default/`)
-3. Plugin template directory (`optix-core/templates/`)
+3. Plugin template directory (`phantom-core/templates/`)
 4. Theme root template
 
 ## Theme API Functions
 
 Use these in profile templates to access settings:
 
-- `optix_option( $key, $default )` — Any setting
+- `phantom_option( $key, $default )` — Any setting
 - `optix_string( $key, $default )` — Cast to string
 - `optix_int( $key, $default )` — Cast to int
 - `optix_bool( $key, $default )` — Cast to bool

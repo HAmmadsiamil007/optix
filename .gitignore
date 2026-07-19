@@ -1,45 +1,6 @@
-﻿# OS
-Thumbs.db
-.DS_Store
-desktop.ini
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# PHP
-phpunit.phar
-*.log
-
-# Project temp
-nul
-*.txt
-*.yml
-*.bak
-*-backup.php
-wp-config-backup.php
-check-engines.php
-fix-config.php
-reactivate.php
-restore-config.php
-anchored-summary.md
-CONTEXT.md
-wp-install-page.md
-front-page-*.md
-homepage*.md
-*snapshot.md
-
-# Serena memories
-.serena/
-
-# Temp test files
-tmp_*.php
-test.md
-
-# Playwright snapshots
+﻿node_modules/
+package-lock.json
+phantom-core-remediation-todo.md
 .playwright-mcp/
-
-# PowerShell artifacts
--w
+.serena/
+nul

@@ -11,10 +11,10 @@ add_filter(
 	'phantom_dynamic_css',
 	function ( string $css ): string {
 		$keys = array(
-			'mobile_breakpoint', 'tablet_breakpoint',
+			'breakpoint_sm', 'breakpoint_md', 'breakpoint_lg', 'breakpoint_xl',
 		);
 
-		$px_keys = array( 'mobile_breakpoint', 'tablet_breakpoint' );
+		$px_keys = array( 'breakpoint_sm', 'breakpoint_md', 'breakpoint_lg', 'breakpoint_xl' );
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();
 		$output = '';

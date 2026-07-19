@@ -11,13 +11,12 @@ add_filter(
 	'phantom_dynamic_css',
 	function ( string $css ): string {
 		$keys = array(
-			'button_bg', 'button_text_color',
-			'button_hover_bg', 'button_hover_text_color',
+			'button_bg', 'button_text',
+			'button_bg_hover', 'button_text_hover',
 			'button_padding_x', 'button_padding_y',
-			'border_radius_button', 'shadow_button',
 		);
 
-		$px_keys = array( 'button_padding_x', 'button_padding_y', 'border_radius_button' );
+		$px_keys = array( 'button_padding_x', 'button_padding_y' );
 
 		$map    = \PhantomCore\Settings_Registry::get_css_var_map();
 		$output = '';

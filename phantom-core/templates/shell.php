@@ -16,6 +16,8 @@ class Shell {
 
     private static ?Shell $instance = null;
     private array $routes = array();
+    private ?int $resolved_product_id = null;
+    private ?int $resolved_post_id = null;
 
     public static function get_instance(): self {
         if ( null === self::$instance ) {
@@ -37,7 +39,7 @@ class Shell {
             'contact'       => 'contact.html',
             'cart'          => 'cart.html',
             'checkout'      => 'checkout.html',
-            'my-account'    => 'login.html',
+            'my-account'    => 'my-account.html',
             'coming-soon'   => 'coming-soon.html',
             'faq'           => 'faq.html',
             'team'          => 'team.html',
@@ -49,8 +51,8 @@ class Shell {
             'cookie-policy' => 'cookie-policy.html',
             // Aliases for .html reference fallback
             'login'              => 'login.html',
-            'register'           => 'login.html',
-            // 'services' => 'services.html',  // file does not exist
+            'register'           => 'join-now.html',
+            'services'      => 'services.html',
             'one-column'         => 'one-column.html',
             'two-column'         => 'two-column.html',
             'three-column'       => 'three-column.html',
@@ -58,6 +60,8 @@ class Shell {
             'three-colum-sidbar' => 'three-colum-sidbar.html',
             'six-colum-full-wide' => 'six-colum-full-wide.html',
             'load-more'          => 'load-more.html',
+            'search'             => 'search-results.html',
+            'password-reset'     => 'password-reset.html',
         );
 
         // WooCommerce SPA shell compatibility filters
@@ -148,11 +152,11 @@ class Shell {
             if ( ! $product_data && function_exists( 'wc_get_product_id_by_slug' ) ) {
                 $product_id_by_slug = wc_get_product_id_by_slug( $product_slug );
                 if ( $product_id_by_slug ) {
-                    $_GET['product_id'] = $product_id_by_slug;
+                    $this->resolved_product_id = $product_id_by_slug;
                 }
             }
             if ( $product_data ) {
-                $_GET['product_id'] = $product_data->ID;
+                $this->resolved_product_id = $product_data->ID;
             }
         }
         // Handle post detail pages
@@ -168,7 +172,7 @@ class Shell {
             ) );
             $post = $post_query->have_posts() ? $post_query->posts[0] : null;
             if ( $post ) {
-                $_GET['post_id'] = $post->ID;
+                $this->resolved_post_id = $post->ID;
             }
         }
         // Normal route — try exact slug, then strip .html suffix
@@ -228,6 +232,8 @@ class Shell {
 
 		// Inject PhantomBridge data + script
 		$html = $this->inject_bridge( $html );
+		$html = $this->inject_auth_nonces( $html );
+		$html = $this->inject_minified_js( $html );
 
 		// Plugin compatibility hooks — plugins can inject content before </head> and </body>
 		ob_start();
@@ -268,6 +274,7 @@ class Shell {
         header( 'X-Content-Type-Options: nosniff' );
         header( 'X-Frame-Options: SAMEORIGIN' );
         header( 'Referrer-Policy: strict-origin-when-cross-origin' );
+        header( 'Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()' );
         echo $html;
         exit;
     }
@@ -322,7 +329,7 @@ class Shell {
 
         // Replace product_name placeholder
         if ( strpos( $title, '{product_name}' ) !== false ) {
-            $product_id = isset( $_GET['product_id'] ) ? (int) $_GET['product_id'] : 0;
+            $product_id = $this->resolved_product_id ?? ( isset( $_GET['product_id'] ) ? (int) $_GET['product_id'] : 0 );
             if ( $product_id && function_exists( 'wc_get_product' ) ) {
                 $product = wc_get_product( $product_id );
                 if ( $product ) {
@@ -333,7 +340,7 @@ class Shell {
 
         // Replace post_title placeholder
         if ( strpos( $title, '{post_title}' ) !== false ) {
-            $post_id = isset( $_GET['post_id'] ) ? (int) $_GET['post_id'] : 0;
+            $post_id = $this->resolved_post_id ?? ( isset( $_GET['post_id'] ) ? (int) $_GET['post_id'] : 0 );
             if ( $post_id ) {
                 $post = get_post( $post_id );
                 if ( $post ) {
@@ -399,7 +406,7 @@ class Shell {
 
         // Page-type-specific schema
         if ( preg_match( '/^product/', $slug ) && function_exists( 'wc_get_product' ) ) {
-            $product_id = isset( $_GET['product_id'] ) ? (int) $_GET['product_id'] : 0;
+            $product_id = $this->resolved_product_id ?? ( isset( $_GET['product_id'] ) ? (int) $_GET['product_id'] : 0 );
             if ( $product_id ) {
                 $product = wc_get_product( $product_id );
                 if ( $product ) {
@@ -489,7 +496,7 @@ class Shell {
                 }
             }
         } elseif ( preg_match( '/^(blog|post|single-blog)/', $slug ) ) {
-            $post_id = isset( $_GET['post_id'] ) ? (int) $_GET['post_id'] : 0;
+            $post_id = $this->resolved_post_id ?? ( isset( $_GET['post_id'] ) ? (int) $_GET['post_id'] : 0 );
             if ( $post_id ) {
                 $post = get_post( $post_id );
                 if ( $post ) {
@@ -679,7 +686,15 @@ class Shell {
 			$data[ $key ] = get_option( $option_key, $entry['default'] ?? '' );
 		}
 		$data['_cssVarMap'] = $css_map;
-		$data['can_edit']  = is_user_logged_in() && current_user_can( 'edit_theme_options' );
+		$data['can_edit']     = is_user_logged_in() && current_user_can( 'edit_theme_options' );
+		$data['api_nonce']     = wp_create_nonce( 'phantom_api' );
+		$data['auth_nonce']    = wp_create_nonce( 'phantom_auth' );
+		$data['is_logged_in']  = is_user_logged_in();
+		if ( is_user_logged_in() ) {
+			$current_user            = wp_get_current_user();
+			$data['user_name']       = $current_user->display_name;
+			$data['user_email']      = $current_user->user_email;
+		}
 
 		$json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
 
@@ -689,6 +704,31 @@ class Shell {
 
 		$html = str_replace( '</body>', $bridge_script . '</body>', $html );
 		return $html;
+	}
+
+	private function inject_auth_nonces( string $html ): string {
+		$nonce = wp_create_nonce( 'phantom_auth' );
+		$script = '<script id="phantom-auth-nonce">(function(){var n=' . wp_json_encode( $nonce ) . ';document.querySelectorAll(\'form[action*="/login/"],form[action*="/join-now/"],form[action*="/password-reset/"]\').forEach(function(f){var i=document.createElement(\'input\');i.type=\'hidden\';i.name=\'phantom_auth_nonce\';i.value=n;f.appendChild(i)})})()</script>';
+		return str_replace( '</body>', $script . '</body>', $html );
+	}
+
+	private function inject_minified_js( string $html ): string {
+		$js_dir = PHANTOM_CORE_PATH . 'frontend/assets/js/';
+		return preg_replace_callback(
+			'/(<script\s+[^>]*src\s*=\s*["\'])([^"\']+\.js)(["\'])/i',
+			function ( $m ) use ( $js_dir ) {
+				$src = $m[2];
+				$min = preg_replace( '/\.js$/', '.min.js', $src );
+				if ( $min !== $src ) {
+					$min_path = $js_dir . basename( $min );
+					if ( file_exists( $min_path ) ) {
+						return $m[1] . $min . $m[3];
+					}
+				}
+				return $m[0];
+			},
+			$html
+		);
 	}
 
 	private function inject_google_fonts( string $html ): string {
@@ -754,9 +794,17 @@ class Shell {
 	 */
 	public function invalidate_cache_on_save( int $post_id ): void {
 		delete_transient( 'phantom_page_data' );
-		$cache_dir = WP_CONTENT_DIR . '/cache/phantom/';
+		$upload_dir = wp_upload_dir();
+		$cache_dir  = $upload_dir['basedir'] . '/phantom-cache/';
 		if ( is_dir( $cache_dir ) ) {
 			$files = glob( $cache_dir . '*.css' );
+			if ( is_array( $files ) ) {
+				array_map( 'unlink', $files );
+			}
+		}
+		$legacy_dir = WP_CONTENT_DIR . '/cache/phantom/';
+		if ( is_dir( $legacy_dir ) ) {
+			$files = glob( $legacy_dir . '*.css' );
 			if ( is_array( $files ) ) {
 				array_map( 'unlink', $files );
 			}

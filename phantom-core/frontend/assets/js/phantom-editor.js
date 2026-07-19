@@ -6,14 +6,13 @@
 (function () {
   'use strict';
 
-  const apiBase = '/index.php?rest_route=/phantom/v1';
+  var apiBase = (window.phantomData && window.phantomData.rest_url ? window.phantomData.rest_url.replace(/\/+$/, '') : (window.wpApiSettings && window.wpApiSettings.root ? window.wpApiSettings.root.replace(/\/+$/, '') : '/index.php?rest_route=/phantom/v1')) + '/phantom/v1';
   let editMode = false;
   let toolbar = null;
   let restNonce = '';
 
   function getNonce() {
-    var meta = document.querySelector('meta[name="wp-rest-nonce"]');
-    return meta ? meta.getAttribute('content') : '';
+    return (window.phantomData && window.phantomData.api_nonce) || '';
   }
 
   function isAdmin() {
@@ -23,7 +22,7 @@
   function saveSetting(key, value) {
     const url = apiBase + '/settings/' + encodeURIComponent(key);
     var headers = { 'Content-Type': 'application/json' };
-    if (restNonce) headers['X-WP-Nonce'] = restNonce;
+    if (restNonce) headers['X-Phantom-Nonce'] = restNonce;
     return fetch(url, {
       method: 'PUT',
       credentials: 'same-origin',
@@ -48,6 +47,7 @@
 
   function onEditableBlur(e) {
     var el = e.currentTarget;
+    if (el._phantomCleanup) { el._phantomCleanup(); delete el._phantomCleanup; }
     var key = el.getAttribute('data-phantom-key');
     if (!key) return;
     var val = el.tagName === 'A' ? el.getAttribute('href') : el.innerHTML.replace(/<br\s*\/?>/g, '\n');
@@ -74,6 +74,9 @@
     el.focus();
     el.addEventListener('blur', onEditableBlur, { once: true });
     el.addEventListener('keydown', onEditableKeydown);
+    el._phantomCleanup = function () {
+      el.removeEventListener('keydown', onEditableKeydown);
+    };
   }
 
   function onElementClick(e) {
