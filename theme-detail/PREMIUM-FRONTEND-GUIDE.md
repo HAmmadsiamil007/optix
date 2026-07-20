@@ -590,7 +590,7 @@ $html = str_replace('<!--sidebar-->', $sidebar_html, $html);
 - `data-product-type` — `simple` or `variable`
 - `data-variation-id` — Variation ID (for variable products)
 
-### 2.7 Categories (data-phantom-categories)
+### 2.8 Categories (data-phantom-categories)
 
 ```html
 <!-- Category list in sidebar or homepage -->
@@ -606,7 +606,7 @@ $html = str_replace('<!--sidebar-->', $sidebar_html, $html);
 </div>
 ```
 
-### 2.8 WooCommerce Cart & Checkout
+### 2.9 WooCommerce Cart & Checkout
 
 **Cart display:**
 ```html
@@ -675,7 +675,7 @@ $html = str_replace('<!--sidebar-->', $sidebar_html, $html);
 | Get shipping | `POST /phantom/v1/cart/shipping-methods` | POST |
 | Checkout | `wc-ajax=checkout` | POST (WC native) |
 
-### 2.9 REST API (34 Endpoints Under `phantom/v1`)
+### 2.10 REST API (34 Endpoints Under `phantom/v1`)
 
 | # | Endpoint | Methods | Permission | Purpose |
 |---|----------|---------|------------|---------|
