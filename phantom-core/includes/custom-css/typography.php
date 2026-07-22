@@ -27,6 +27,8 @@ add_filter(
 			'menu_font_size',
 		);
 
+		$px_keys = \PhantomCore\Settings_Registry::get_px_keys();
+
 		foreach ( $keys as $k ) {
 			if ( ! isset( $map[ $k ] ) ) {
 				continue;
@@ -35,7 +37,7 @@ add_filter(
 			$val = get_option( 'phantom_' . $k, '' );
 			if ( '' !== $val ) {
 				$val_display = $val;
-				if ( in_array( $k, array( 'typography_base_size', 'menu_font_size', 'typography_body_spacing', 'typography_heading_spacing' ), true ) && is_numeric( $val ) ) {
+				if ( in_array( $k, $px_keys, true ) && is_numeric( $val ) ) {
 					$val_display .= 'px';
 				}
 				$output .= "\t" . $map[ $k ] . ': ' . esc_attr( $val_display ) . ';' . "\n";

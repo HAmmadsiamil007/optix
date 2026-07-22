@@ -690,21 +690,20 @@ class Shell {
 	}
 
 	private function inject_google_fonts( string $html ): string {
-		$options = get_option( 'phantom_options', array() );
-		$fonts   = array();
+		$fonts = array();
 
-		$fonts[] = $options['typography_body_font'] ?? 'Archivo';
+		$fonts[] = get_option( 'phantom_typography_body_font', 'Archivo' );
 
-		$heading_font = $options['typography_heading_font'] ?? '';
+		$heading_font = get_option( 'phantom_typography_heading_font', '' );
 		if ( '' !== $heading_font ) {
 			$fonts[] = $heading_font;
 		}
 
 		$headings = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
 		foreach ( $headings as $h ) {
-			$key = 'typography_' . $h . '_font';
-			if ( ! empty( $options[ $key ] ) ) {
-				$fonts[] = $options[ $key ];
+			$font = get_option( 'phantom_typography_' . $h . '_font', '' );
+			if ( '' !== $font ) {
+				$fonts[] = $font;
 			}
 		}
 
